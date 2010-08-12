@@ -37,10 +37,10 @@
    :char #(.getChar ^ByteBuffer %)})
 
 (defprotocol Signature
-  (^:private num-bytes [s])
-  (^:private flattened [s])
-  (^:private signature [s])
-  (^:private get-element [s b]))
+  (num-bytes [s])
+  (flattened [s])
+  (signature [s])
+  (get-element [s b]))
 
 (defn- signature? [s]
   (= (->> s meta :type) ::signature))
