@@ -1,17 +1,1 @@
-# discourse
-
-FIXME: write description
-
-## Usage
-
-FIXME: write
-
-## Installation
-
-FIXME: write
-
-## License
-
-Copyright (C) 2010 FIXME
-
-Distributed under the Eclipse Public License, the same as Clojure.
+Idio is a simple way to turn fixed-size Clojure data structures into byte buffers.  This can be useful for interop with C data structures and network protocols.
