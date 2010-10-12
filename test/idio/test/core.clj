@@ -7,25 +7,24 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns idio.test.core
-  (:use [idio] [clojure.contrib.combinatorics] :reload-all)
-  (:use [clojure.test]))
+  (:use [idio.core])
+  (:use [clojure.test])
+  (:import [java.nio ByteBuffer]))
 
-(def types [:byte :short :int :long :float :double])
+(defn wrap-seq [seq]
+  (ByteBuffer/wrap (byte-array (map byte seq))))
 
-(defn equivalent? [a b]
-  (every? identity (map == a b)))
+(deftest test-drop-bytes
+  (let [bufs (map wrap-seq (partition 5 (range 100)))]
+    (dotimes [i 100]
+      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes i bufs)))))))
 
-(deftest mixed-types
-  (doseq [sig (permutations types)]
-    (let [data (range (count sig))]
-      (is (equivalent? data (first (from-bytes (to-bytes data sig) sig)))))))
+(deftest test-take-bytes
+  (let [bufs (map wrap-seq (partition 5 (range 100)))]
+    (dotimes [i 100]
+      (is (= (take i (range 100)) (mapcat byte-seq (take-bytes i bufs)))))))
 
-(def structures
-  {[:int [:int :int] :int] [1 [2 3] 4]
-   '(:int {:a :int :b :int} :int) '(1 {:a 2 :b 3} 4)
-   {:a [:int :int :int :int]} {:a [1 2 3 4]}})
-
-(deftest mixed-structures
-  (let [buf (to-bytes [1 2 3 4] :int)]
-    (doseq [[structure result] structures]
-      (is (= result (first (from-bytes buf structure)))))))
+(deftest test-take-contiguous-bytes
+  (let [bufs (map wrap-seq (partition 5 (range 100)))]
+    (dotimes [i 100]
+      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes i bufs)))))))
