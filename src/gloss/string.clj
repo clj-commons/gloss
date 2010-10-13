@@ -6,7 +6,7 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns idio.string
+(ns gloss.string
   (:use
     [idio.core])
   (:import
@@ -18,26 +18,38 @@
      Charset
      CoderResult]))
 
+(defprotocol CharBufferSeq
+  (remainder-chars [s]))
+
 (defn- create-char-buf
   [^CharsetDecoder decoder ^ByteBuffer byte-buf]
   (CharBuffer/allocate (int (Math/ceil (/ (.remaining byte-buf) (.averageCharsPerByte decoder))))))
 
 (defn- take-string-from-buf
   [^CharsetDecoder decoder, ^ByteBuffer byte-buf, ^CharBuffer char-buf]
-  (loop [chars [(if char-buf char-buf (create-char-buf decoder byte-buf))]]
-    (let [result (-> decoder (.decode byte-buf (last chars) false))]
-      (when (.isError result)
-	(.throwException result))
-      (if (.isOverflow result)
-	(recur (conj chars (create-char-buf decoder byte-buf)))
-	chars))))
+  (let [byte-buf (.duplicate byte-buf)]
+    (loop [chars [(if char-buf char-buf (create-char-buf decoder byte-buf))]]
+      (let [result (-> decoder (.decode byte-buf (last chars) false))]
+	(when (.isError result)
+	  (.throwException result))
+	(if (.isOverflow result)
+	  (recur (conj chars (create-char-buf decoder byte-buf)))
+	  (let [last-char ^CharBuffer (last chars)]
+	    {:remainder-bytes (when (.hasRemaining byte-buf) (.slice byte-buf))
+	     :remainder-chars (when (.hasRemaining last-char) (-> last-char .duplicate .slice))
+	     :chars (if-not (.hasRemaining last-char)
+		      (map #(.rewind ^CharBuffer %) chars)
+		      (concat
+			(map #(.rewind ^CharBuffer %) (drop-last chars))
+			(let [pos (.position last-char)]
+			  [(-> last-char (.position 0) (.limit pos))])))}))))))
 
 (defn take-string
-  ([s]
-     (take-string s "UTF-8"))
-  ([s charset]
-     (take-string s charset nil))
-  ([s charset buf]
+  ([buf-seq]
+     (take-string buf-seq "UTF-8"))
+  ([buf-seq charset]
+     (take-string buf-seq charset nil))
+  ([buf-seq charset buf]
      (let [charset (Charset/forName charset)
 	   decoder (.newDecoder charset)]
        )))
