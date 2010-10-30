@@ -1,0 +1,3 @@
+Gloss is a byte-format DSL.  It will allow for easy interop with custom network protocols, C libraries, and allow for compact byte representations of Clojure data structures.
+
+It is a work in progress.

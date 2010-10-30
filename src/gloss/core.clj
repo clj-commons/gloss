@@ -21,12 +21,16 @@
     (ByteBuffer/wrap (.getBytes ^String s "utf-8"))
     (ByteBuffer/wrap (byte-array (map byte s)))))
 
+(def byte-array-class (class (byte-array [])))
+
 (defn to-buffer-seq [x]
-  (cond
-    (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x 
-    (instance? ByteBuffer x) [x]
-    (satisfies? BufferSeq x) (buffer-seq x)
-    :else (Exception. "Cannot convert to buffer-seq")))
+  (when x
+    (cond
+      (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x
+      (= (class x) byte-array-class) [(ByteBuffer/wrap x)]
+      (instance? ByteBuffer x) [x]
+      (satisfies? BufferSeq x) (buffer-seq x)
+      :else (throw (Exception. (str "Cannot convert to buffer-seq: " x))))))
 
 (defn buffer-seq-count [buf-seq]
   (apply + (map #(.remaining ^ByteBuffer %) buf-seq)))
@@ -50,7 +54,7 @@
     (if (> (.remaining first-buf) n)
       (-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)
       (when (<= n (buffer-seq-count buf-seq))
-	(let [ary (byte-array bytes)]
+	(let [ary (byte-array n)]
 	  (loop [offset 0, s buf-seq]
 	    (if (>= offset n)
 	      (ByteBuffer/wrap ary)
@@ -64,24 +68,25 @@
   [n bytes]
   (let [buf-seq (to-buffer-seq bytes)
 	first-buf ^ByteBuffer (first buf-seq)]
-    (if (> (.remaining first-buf) n)
-      [(-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)]
-      (when (<= n (buffer-seq-count buf-seq))
-	(loop [remaining n, s buf-seq, accumulator []]
-	  (if (pos? remaining)
-	    (let [buf ^ByteBuffer (first s)]
-	      (if (>= remaining (.remaining buf))
-		(recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
-		(conj accumulator (-> buf .duplicate (.limit (+ (.position buf) remaining)) .slice))))
-	    accumulator))))))
+    (when first-buf
+      (if (> (.remaining first-buf) n)
+	[(-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)]
+	(when (<= n (buffer-seq-count buf-seq))
+	  (loop [remaining n, s buf-seq, accumulator []]
+	    (if (pos? remaining)
+	      (let [buf ^ByteBuffer (first s)]
+		(if (>= remaining (.remaining buf))
+		  (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
+		  (conj accumulator (-> buf .duplicate (.limit (+ (.position buf) remaining)) .slice))))
+	      accumulator)))))))
 
 ;;naive solution - this assumes small and dissimilar delimiters
 (defn take-delimited-bytes
   "Returns the buffer-sequence as two buffer-sequences, split around the first found
    instance of a delimiter."
-  ([delimiters bytes]
+  ([bytes delimiters]
      (take-delimited-bytes delimiters bytes true))
-  ([delimiters bytes strip-delimiters?]
+  ([bytes delimiters strip-delimiters?]
      (let [buf-seq (to-buffer-seq bytes)
 	   delimiters (reverse (sort-by #(.remaining ^ByteBuffer %) delimiters))
 	   first-byte (fn this [s]
@@ -122,20 +127,25 @@
       (concat-bytes [_ bytes]
 	(let [buf-seq (to-buffer-seq bytes)]
 	  (if first
-	    (create-delimited-seq first (concat rest buffer-seq) remainder delimiters strip-delimiters?)
+	    (create-delimited-seq first (concat rest buf-seq) remainder delimiters strip-delimiters?)
 	    (let [remainder-overlap (min max-delimiter-length (buffer-seq-count remainder))
-		  remainder (drop remainder-overlap remainder)
-		  buf-seq (concat (take remainder-overlap remainder) buf-seq)
-		  [x* xs*] (wrap-delimited-bytes buf-seq delimiters strip-delimiters?)
+		  buf-seq (concat (take-bytes remainder-overlap remainder) buf-seq)
+		  remainder (drop-bytes remainder-overlap remainder)
+		  [x* xs*] (take-delimited-bytes buf-seq delimiters strip-delimiters?)
+		  x* (when x* (concat remainder x*))
 		  remainder* (when-not x* (concat remainder xs*))
 		  xs* (when x* xs*)]
 	      (create-delimited-seq x* xs* remainder* delimiters strip-delimiters?)))))
       clojure.lang.ISeq
+      (seq [this]
+	(when first
+	  (cons first (seq (next this)))))
       (first [_] first)
       (next [_]
 	(when (pos? (buffer-seq-count rest))
 	  (wrap-delimited-bytes rest delimiters strip-delimiters?)))
-      (more [this] (if-let [n (next this)] n []))
+      (more [this]
+	(if-let [n (next this)] n []))
       (cons [_ bytes]
 	(let [buf-seq (to-buffer-seq bytes)]
 	  (wrap-delimited-bytes (concat buf-seq remainder (when first [first]) rest) delimiters strip-delimiters?))))))
@@ -145,7 +155,7 @@
      (wrap-delimited-bytes bytes delimiters true))
   ([bytes delimiters strip-delimiters?]
      (let [buf-seq (to-buffer-seq bytes)
-	   [x xs] (take-delimited-bytes delimiters buf-seq strip-delimiters?)
+	   [x xs] (take-delimited-bytes buf-seq delimiters strip-delimiters?)
 	   remainder (when-not x xs)
 	   xs (when x xs)]
        (create-delimited-seq x xs remainder delimiters strip-delimiters?))))

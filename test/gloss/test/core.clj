@@ -7,8 +7,8 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.test.core
-  (:use [idio.core])
-  (:use [clojure.test])
+  (:use [gloss core])
+  (:use [clojure test])
   (:import [java.nio ByteBuffer]))
 
 (defn byte-seq [^ByteBuffer buf]
@@ -44,17 +44,17 @@
   (let [bufs (map byte-buffer (partition 3 (range 12)))]
     (dotimes [i 12]
       (let [delimiters [(byte-buffer [i])]]
-	(test-split i 1 bufs (take-delimited-bytes delimiters bufs true))
-	(test-split (inc i) 0 bufs (take-delimited-bytes delimiters bufs false)))))
+	(test-split i 1 bufs (take-delimited-bytes bufs delimiters true))
+	(test-split (inc i) 0 bufs (take-delimited-bytes bufs delimiters false)))))
 
   ;;non-existent delimiters
-  (let [bufs (map byte-buffer (partition 4 (range 100)))]
-    (test-split 101 0 bufs (take-delimited-bytes [(byte-buffer [1 3])] bufs false))
-    (test-split 101 0 bufs (take-delimited-bytes [(byte-buffer [101])] bufs false)))
+  '(let [bufs (map byte-buffer (partition 4 (range 100)))]
+    (test-split 101 0 bufs (take-delimited-bytes bufs [(byte-buffer [1 3])] false))
+    (test-split 101 0 bufs (take-delimited-bytes bufs [(byte-buffer [101])] false)))
 
   ;;multi-byte delimiters
-  (let [bufs (map byte-buffer (partition 3 (range 12)))]
+  '(let [bufs (map byte-buffer (partition 3 (range 12)))]
     (dotimes [i 11]
       (let [delimiters [(byte-buffer [i]) (byte-buffer [i (inc i)])]]
-	(test-split (+ i 2) 0 bufs (take-delimited-bytes delimiters bufs false))
-	(test-split i 2 bufs (take-delimited-bytes delimiters bufs true))))))
+	(test-split (+ i 2) 0 bufs (take-delimited-bytes bufs delimiters false))
+	(test-split i 2 bufs (take-delimited-bytes bufs delimiters true))))))

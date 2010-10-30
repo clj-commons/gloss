@@ -1,1 +1,0 @@
-Idio is a simple way to turn fixed-size Clojure data structures into byte buffers.  This can be useful for interop with C data structures and network protocols.
