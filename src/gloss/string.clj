@@ -11,6 +11,7 @@
     [gloss.core])
   (:import
     [java.nio
+     Buffer
      ByteBuffer
      CharBuffer]
     [java.nio.charset
@@ -19,87 +20,180 @@
      CoderResult]))
 
 (defprotocol CharBufferSeq
-  (char-buffer-seq [s])
-  (remainder-chars [s]))
+  (char-buffer-seq [s]))
+
+(defn- take-finite-string-from-buf )
 
 (defn- create-char-buf
-  [^CharsetDecoder decoder ^ByteBuffer byte-buf]
-  (CharBuffer/allocate (int (Math/ceil (/ (.remaining byte-buf) (.averageCharsPerByte decoder))))))
-
-(defn- take-string-from-buf
-  "Takes a single ByteBuffer, and turns it into a sequence of CharBuffers."
-  [^CharsetDecoder decoder, ^ByteBuffer byte-buf, ^CharBuffer char-buf, handle-overflow?]
-  (let [byte-buf (.duplicate byte-buf)
-	char-buf (.duplicate ^CharBuffer (or char-buf (create-char-buf decoder byte-buf)))]
-    (loop [chars [char-buf]]
-      (let [result (-> decoder (.decode byte-buf (last chars) false))]
-	(if (and handle-overflow? (.isOverflow result))
-	  (recur (conj chars (create-char-buf decoder byte-buf)))
-	  (let [last-char ^CharBuffer (last chars)]
-	    {:remainder-bytes (when (.hasRemaining byte-buf)
-				(.slice byte-buf))
-	     :remainder-chars (when (.hasRemaining last-char)
-				(-> last-char .duplicate .slice))
-	     :chars (if-not (.hasRemaining last-char)
-		      (map #(.rewind ^CharBuffer %) chars)
-		      (conj
-			(vec (map #(.rewind ^CharBuffer %) (drop-last chars)))
-			(let [pos (.position last-char)]
-			  (-> last-char (.position 0) (.limit pos)))))}))))))
-
-'(defn- take-finite-string-from-buf
-  [^CharsetDecoder decoder, ])
-
-(defn- take-char-from-buf-seq
   [^CharsetDecoder decoder buf-seq]
-  (let [char-buf (CharBuffer/allocate 1)]
-    (.reset decoder)
-    (loop [byte-count 1]
-      (.rewind char-buf)
-      (let [bytes (take-contiguous-bytes byte-count buf-seq)]
-	(if-not bytes
-	  [nil buf-seq]
-	  (let [chars (first (:chars (take-string-from-buf decoder bytes char-buf false)))]
-	    (if (pos? (.length chars))
-	      [(.rewind char-buf) (drop-bytes byte-count buf-seq)]
-	      (recur (inc byte-count)))))))))
+  (CharBuffer/allocate (int (Math/ceil (/ (buffer-seq-count buf-seq) (.averageCharsPerByte decoder))))))
 
-(declare wrap-string-)
+(defn rewind-buf-seq [buf-seq]
+  (concat
+    (map #(.rewind ^Buffer %) (drop-last buf-seq))
+    (let [last-buf (last buf-seq)
+	  last-pos (.position last-buf)]
+      [(-> last-buf (.position 0) (.limit last-pos) .slice)])))
 
-(defn- create-wrapped-string [charset chars remainder-bytes remainder-chars]
-  (reify
-    CharBufferSeq
-    (char-buffer-seq [_] chars)
-    (remainder-chars [_] remainder-chars)
-    BufferSeq
-    (buffer-seq [_] )
-    (remainder-buffers [_] remainder-bytes)
-    (concat-bytes [_ b]
-      (wrap-string-
-	(apply concat (map to-buffer-seq [remainder-bytes b]))
-	chars
-	charset
-	remainder-chars
-	true))
-    (toString [_] (apply str chars))))
+(defn nth-char [char-buf-seq length idx]
+  (if (neg? idx)
+    (throw (IndexOutOfBoundsException. (str idx " is not a valid index.")))
+    (loop [idx idx chars chars]
+      (let [buf ^CharBuffer (first chars)]
+	(cond
+	  (nil? buf) (throw (IndexOutOfBoundsException. (str idx "is greater than length of " length)))
+	  (> idx (.remaining buf)) (recur (- idx (.remaining buf)) (rest chars))
+	  :else (.get buf idx))))))
 
-(defn- wrap-string- [buf-seq chars charset remainder-chars handle-overflow?]
-  (let [charset (if (string? charset) (Charset/forName charset) charset)
-	decoder (.newDecoder charset)]
-    (loop [bytes buf-seq, chars chars, remainder-chars remainder-chars]
+(defn sub-sequence [buf-seq length start end]
+  (if (or (neg? start) (<= length end))
+    (throw (IndexOutOfBoundsException. (str "[" start ", " end ") is not a valid interval.")))
+    (-> buf-seq (drop-from-bufs start) (take-from-bufs (- end start)))))
+
+;;;
+
+(defn take-finite-string-from-buf-seq [^CharsetDecoder decoder ^CharBuffer char-buf buf-seq]
+  (let [buf-seq (dup-buffer-seq buf-seq)]
+    (if-not (.hasRemaining char-buf)
+      [char-buf buf-seq]
+      (loop [bytes buf-seq]
+	(if (empty? bytes)
+	  [char-buf nil]
+	  (let [first-buf (first bytes)
+		result (.decode decoder first-buf char-buf false)]
+	    (cond
+	      
+	      (.isOverflow result)
+	      [char-buf bytes]
+	      
+	      (and (.isUnderflow result) (pos? (.remaining first-buf)))
+	      (if (= 1 (count bytes))
+		[char-buf bytes]
+		(recur
+		  (cons
+		    (take-contiguous-bytes (inc (buffer-seq-count (take 1 bytes))) bytes)
+		    (drop-bytes 1 (rest bytes)))))
+	      
+	      :else
+	      (recur (rest bytes)))))))))
+
+(defn take-string-from-buf-seq [^CharsetDecoder decoder, buf-seq]
+  (let [buf-seq (dup-buffer-seq buf-seq)
+	char-buf (create-char-buf decoder buf-seq)]
+    (loop [chars [char-buf], bytes buf-seq]
       (if (empty? bytes)
-	(create-wrapped-string charset chars nil remainder-chars)
-	(let [result (take-string-from-buf decoder (first bytes) remainder-chars handle-overflow?)]
-	  (if-let [remainder-bytes (:remainder-bytes result)]
-	    (let [consumed-bytes (- (.remaining ^ByteBuffer (first bytes)) (.remaining ^ByteBuffer remainder-bytes))
-		  [char bytes] (take-char-from-buf-seq decoder (drop-bytes consumed-bytes bytes))]
-	      (if-not char
-		(create-wrapped-string charset chars remainder-bytes (:remainder-chars result))
-		(recur bytes (concat chars (:chars result) [char]) (:remainder-chars result))))
-	    (recur (drop 1 bytes) (concat chars (:chars result)) (:remainder-chars result))))))))
+	[(rewind-buf-seq chars) nil]
+	(let [first-buf (first bytes)
+	      result (-> decoder (.decode first-buf (last chars) false))]
+	  (cond
+
+	    (.isOverflow result)
+	    (recur (conj chars (create-char-buf decoder bytes)) bytes)
+
+	    (and (.isUnderflow result) (pos? (.remaining first-buf)))
+	    (if (= 1 (count bytes))
+	      [(rewind-buf-seq chars) bytes]
+	      (recur chars
+		(cons
+		  (take-contiguous-bytes (inc (buffer-seq-count (take 1 bytes))) bytes)
+		  (drop-bytes 1 (rest bytes)))))
+
+	    :else
+	    (recur chars (rest bytes))))))))
+
+;;;
+
+(defn- create-wrapped-string [^CharsetDecoder decoder chars buf-seq]
+  (let [length (apply + (map #(.remaining ^CharBuffer %) chars))]
+    (reify
+
+      CharBufferSeq
+      (char-buffer-seq [_] chars)
+
+      BufferSeq
+      (buffer-seq [_]
+	(let [encoder (-> decoder .charset .newEncoder)]
+	  (concat (map #(.encode encoder %) chars) buf-seq)))
+      (remainder-bytes [_] remainder-bytes)
+      (concat-bytes [_ b]
+	(let [b (to-buffer-seq b)
+	      [c b] (take-string-from-buf-seq decoder (concat buf-seq b))]
+	  (create-wrapped-string decoder (concat chars c) b)))
+
+      CharSequence
+      (charAt [this idx] (nth-char chars length idx))
+      (length [_] length)
+      (subSequence [_ start end] (sub-sequence chars length start end))
+      (toString [_] (apply str chars))
+
+      clojure.lang.Counted
+      (count [_] length))))
 
 (defn wrap-string
   ([buf-seq]
      (wrap-string buf-seq "utf-8"))
   ([buf-seq charset]
-     (wrap-string- (to-buffer-seq buf-seq) nil charset nil true)))
+     (let [decoder (.newDecoder (Charset/forName charset))
+	   buf-seq (to-buffer-seq buf-seq)
+	   [c b] (take-string-from-buf-seq decoder buf-seq)]
+       (create-wrapped-string decoder nil (to-buffer-seq buf-seq)))))
+
+;;;
+
+(defn create-string-sequence [^CharsetDecoder decoder substring-length ^CharBuffer char-buf buf-seq]
+  (if (and (nil? char-buf) (zero? (buffer-seq-count buf-seq)))
+    nil
+    (let [char-buf ^CharBuffer (or char-buf (CharBuffer/allocate substring-length))
+	  [char-buf buf-seq] (take-finite-string-from-buf-seq decoder char-buf buf-seq)
+	  complete? (not (.hasRemaining char-buf))
+	  element (when complete? (-> char-buf .duplicate .rewind))]
+      (reify
+
+        BufferSeq
+	(buffer-seq [_]
+	  (let [encoder (-> decoder .charset .newEncoder)]
+	    (concat
+	      [(.encode encoder
+		 (or
+		   element
+		   (-> char-buf .duplicate (.limit (.position char-buf)) (.position 0))))]
+	      buf-seq)))
+	(remainder-bytes [_]
+	  buf-seq)
+	(concat-bytes [_ b]
+	  (let [b (to-buffer-seq b)]
+	    (create-string-sequence
+	      decoder
+	      substring-length
+	      char-buf
+	      (concat buf-seq b))))
+	
+	clojure.lang.ISeq
+	(first [_]
+	  element)
+	(next [this]
+	  (when complete?
+	    (create-string-sequence
+	      decoder
+	      substring-length
+	      nil
+	      buf-seq)))
+	(more [this]
+	  (when-let [n (next this)]
+	    n
+	    []))
+	(cons [s this]
+	  (cons s (seq this)))
+	(seq [this]
+	  (when complete?
+	    (cons (first this) (next this))))))))
+
+(defn wrap-string-sequence
+  ([buf-seq substring-length]
+     (wrap-string-sequence buf-seq substring-length "utf-8"))
+  ([buf-seq substring-length charset]
+     (let [decoder (.newDecoder (Charset/forName charset))
+	   buf-seq (to-buffer-seq buf-seq)]
+       (create-string-sequence decoder substring-length nil buf-seq))))
+
+

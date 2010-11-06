@@ -15,12 +15,32 @@
   (let [buf-seq (to-buffer-seq bytes)]
     (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buffer-seq-count buf-seq))))))
 
-(def pilchards (.getBytes (apply str (repeat 60 "¶")) "utf-8"))
+(def pilchards-string (apply str (repeat 30 "¶")))
+(def pilchards (.getBytes pilchards-string "utf-8"))
+
+(defn segments [interval]
+  (split-str interval pilchards))
+
+(defn concat-and-verify [f]
+  (fn [s b]
+    (is (= s (f s)))
+    (concat-bytes s b)))
 
 (deftest test-wrap-string
-  (dotimes [i 120]
-    (when (and (not (zero? i)) (zero? (rem 120 i)))
+  (doseq [i (range 1 61)]
+    (when (zero? (rem 60 i))
       (let [segments (split-str i pilchards)]
-	(= pilchards (str (reduce concat-bytes (wrap-string (first segments)) (rest segments))))))))
+	(is (= pilchards-string (str (reduce concat-bytes (wrap-string (first segments)) (rest segments)))))))))
+
+(deftest test-wrap-string-sequence
+  (let [divisors (filter #(zero? (rem 30 %)) (range 1 61))]
+    (doseq [buf-interval divisors]
+      (doseq [string-interval divisors]
+	(let [test-sequence (fn [s] (every? #(= % (first "¶")) (apply str s)))]
+	  (is (every? #(= string-interval (count %)) (wrap-string-sequence (segments buf-interval) string-interval)))
+	  (is (= 30 (count (apply str (wrap-string-sequence (segments string-interval) buf-interval)))))
+	  (let [segments (segments buf-interval)
+		string-seq (reduce concat-bytes (wrap-string-sequence (first segments) string-interval) (rest segments))]
+	    (is (= pilchards-string (apply str string-seq)))))))))
 
 

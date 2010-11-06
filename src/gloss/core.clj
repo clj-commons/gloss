@@ -9,17 +9,48 @@
 (ns gloss.core
   (:import
     [java.nio
+     Buffer
      ByteBuffer]))
 
 (defprotocol BufferSeq
   (buffer-seq [s])
-  (remainder-buffers [s])
+  (remainder-bytes [s])
   (concat-bytes [s bytes]))
 
 (defn byte-buffer [s]
   (if (string? s)
     (ByteBuffer/wrap (.getBytes ^String s "utf-8"))
     (ByteBuffer/wrap (byte-array (map byte s)))))
+
+(defn buffer-seq-count [buf-seq]
+  (apply + (map #(.remaining ^ByteBuffer %) buf-seq)))
+
+(defn dup-buffer-seq [buf-seq]
+  (map #(.duplicate ^ByteBuffer %) buf-seq))
+
+(defn drop-from-bufs
+  [n buf-seq]
+  (loop [remaining n, s buf-seq]
+    (when-not (empty? s)
+      (let [buf ^Buffer (first s)]
+	(if (< remaining (.remaining buf))
+	  (cons (-> buf .duplicate (.position (+ remaining (.position buf))) .slice) (rest s))
+	  (recur (- remaining (.remaining buf)) (rest s)))))))
+
+(defn take-from-bufs
+  [n buf-seq]
+  (let [first-buf ^Buffer (first buf-seq)]
+    (when first-buf
+      (if (> (.remaining first-buf) n)
+	[(-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)]
+	(when (<= n (buffer-seq-count buf-seq))
+	  (loop [remaining n, s buf-seq, accumulator []]
+	    (if (pos? remaining)
+	      (let [buf ^Buffer (first s)]
+		(if (>= remaining (.remaining buf))
+		  (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
+		  (conj accumulator (-> buf .duplicate (.limit (+ (.position buf) remaining)) .slice))))
+	      accumulator)))))))
 
 (def byte-array-class (class (byte-array [])))
 
@@ -32,19 +63,11 @@
       (satisfies? BufferSeq x) (buffer-seq x)
       :else (throw (Exception. (str "Cannot convert to buffer-seq: " x))))))
 
-(defn buffer-seq-count [buf-seq]
-  (apply + (map #(.remaining ^ByteBuffer %) buf-seq)))
-
 (defn drop-bytes
   "Returns the buffer-sequence less the first 'n' bytes."
   [n bytes]
   (let [buf-seq (to-buffer-seq bytes)]
-    (loop [remaining n, s buf-seq]
-      (when-not (empty? s)
-	(let [buf ^ByteBuffer (first s)]
-	  (if (< remaining (.remaining buf))
-	    (cons (-> buf .duplicate (.position (+ remaining (.position buf))) .slice) (rest s))
-	    (recur (- remaining (.remaining buf)) (rest s))))))))
+    (drop-from-bufs n buf-seq)))
 
 (defn take-contiguous-bytes
   "Returns a single ByteBuffer which contains the first 'n' bytes of the buffer-sequence."
@@ -66,19 +89,8 @@
 (defn take-bytes
   "Returns a buffer-sequence containing the first 'n' bytes of the given buffer-sequence."
   [n bytes]
-  (let [buf-seq (to-buffer-seq bytes)
-	first-buf ^ByteBuffer (first buf-seq)]
-    (when first-buf
-      (if (> (.remaining first-buf) n)
-	[(-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)]
-	(when (<= n (buffer-seq-count buf-seq))
-	  (loop [remaining n, s buf-seq, accumulator []]
-	    (if (pos? remaining)
-	      (let [buf ^ByteBuffer (first s)]
-		(if (>= remaining (.remaining buf))
-		  (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
-		  (conj accumulator (-> buf .duplicate (.limit (+ (.position buf) remaining)) .slice))))
-	      accumulator)))))))
+  (let [buf-seq (to-buffer-seq bytes)]
+    (take-from-bufs n buf-seq)))
 
 ;;naive solution - this assumes small and dissimilar delimiters
 (defn take-delimited-bytes
@@ -123,7 +135,7 @@
     (reify
       BufferSeq
       (buffer-seq [_] (concat remainder (when first [first]) rest))
-      (remainder-buffers [_] remainder)
+      (remainder-bytes [_] remainder)
       (concat-bytes [_ bytes]
 	(let [buf-seq (to-buffer-seq bytes)]
 	  (if first
@@ -138,8 +150,8 @@
 	      (create-delimited-seq x* xs* remainder* delimiters strip-delimiters?)))))
       clojure.lang.ISeq
       (seq [this]
-	(when first
-	  (cons first (seq (next this)))))
+	(when-let [f (first this)]
+	  (cons f (seq (next this)))))
       (first [_] first)
       (next [_]
 	(when (pos? (buffer-seq-count rest))
