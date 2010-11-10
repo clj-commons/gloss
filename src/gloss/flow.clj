@@ -6,17 +6,15 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.core
-  (:use [gloss bytes string primitives]))
+(ns gloss.flow)
 
-(defn take-sig [sig callback]
-  )
+(defprotocol ByteConsumer
+  (feed [buf-seq]))
 
-(defn string
-  [charset & {:as options}]
-  (let [charset (name charset)]
-    (with-meta
-      (cond
-	(:length options) #(wrap-finite-strings % (:length options) charset)
-	(:delimiters options)   )
-      {:buf-seq-wrapper true})))
+(defn consume-seq [consumer buf-seq]
+  (loop [result [], buf-seq buf-seq]
+    (let [[x xs] (feed consumer buf-seq)]
+      (if x
+	(recur (conj result x) xs)
+	result))))
+

@@ -8,12 +8,12 @@
 
 (ns gloss.test.string
   (:use
-    [gloss core string]
+    [gloss bytes string consumer]
     [clojure test]))
 
 (defn split-str [interval bytes]
-  (let [buf-seq (to-buffer-seq bytes)]
-    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buffer-seq-count buf-seq))))))
+  (let [buf-seq (to-buf-seq bytes)]
+    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buf-seq-count buf-seq))))))
 
 (def pilchards-string (apply str (repeat 30 "¶")))
 (def pilchards (.getBytes pilchards-string "utf-8"))
@@ -26,21 +26,20 @@
     (is (= s (f s)))
     (concat-bytes s b)))
 
-(deftest test-wrap-string
+(deftest test-string-consumer
   (doseq [i (range 1 61)]
     (when (zero? (rem 60 i))
-      (let [segments (split-str i pilchards)]
-	(is (= pilchards-string (str (reduce concat-bytes (wrap-string (first segments)) (rest segments)))))))))
+      (let [segments (split-str i pilchards)
+	    consumer (string-consumer "utf-8")]
+	(is (= pilchards-string (apply str (consumer-seq consumer segments))))))))
 
-(deftest test-wrap-string-sequence
-  (let [divisors (filter #(zero? (rem 30 %)) (range 1 61))]
+(deftest test-finite-string-consumer
+  (let [divisors (filter #(zero? (rem 30 %)) (range 1 61))
+	pilchar (first "¶")]
     (doseq [buf-interval divisors]
       (doseq [string-interval divisors]
-	(let [test-sequence (fn [s] (every? #(= % (first "¶")) (apply str s)))]
-	  (is (every? #(= string-interval (count %)) (wrap-string-sequence (segments buf-interval) string-interval)))
-	  (is (= 30 (count (apply str (wrap-string-sequence (segments string-interval) buf-interval)))))
-	  (let [segments (segments buf-interval)
-		string-seq (reduce concat-bytes (wrap-string-sequence (first segments) string-interval) (rest segments))]
-	    (is (= pilchards-string (apply str string-seq)))))))))
+	(let [strs (consumer-seq (finite-string-consumer "utf-8" string-interval) (split-str buf-interval pilchards))]
+	  (is (every? #(= string-interval (count %)) strs))
+	  (is (= 30 (count (apply str strs)))))))))
 
 
