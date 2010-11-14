@@ -9,24 +9,37 @@
 (ns gloss.core.protocols
   (:import [java.nio Buffer ByteBuffer]))
 
-(defprotocol ByteConsumer
-  (feed [this buf-seq]))
+(defprotocol Reader
+  (read-bytes [this buf-seq]))
 
-(defprotocol ByteEmitter
-  (emit [this val]))
+(defprotocol UnboundedWriter
+  (create-buf [this val]))
 
-(defprotocol ByteWriter
+(defprotocol BoundedWriter
   (size [this])
-  (write [this buf val]))
+  (write-to-buf [this buf val]))
 
-(defn consumer? [x]
-  (satisfies? ByteConsumer x))
+(defn reader? [x]
+  (satisfies? Reader x))
+
+(defn bounded-writer? [x]
+  (satisfies? BoundedWriter x))
+
+(defn unbounded-writer? [x]
+  (satisfies? UnboundedWriter x))
 
 (defn writer? [x]
-  (satisfies? ByteWriter x))
+  (or (bounded-writer? x) (unbounded-writer? x)))
 
-(defn emitter? [x]
-  (satisfies? ByteEmitter x))
+(defn write-bytes [codec val]
+  (cond
+    (bounded-writer? codec)
+    (let [buf (ByteBuffer/allocate (size codec))]
+      (write-to-buf codec buf val)
+      [(.rewind ^ByteBuffer buf)])
+
+    (unbounded-writer? codec)
+    (create-buf codec val)))
 
 (def byte-array-class (class (byte-array [])))
 
@@ -38,17 +51,21 @@
       (instance? ByteBuffer x) [x]
       :else (throw (Exception. (str "Cannot convert to buf-seq: " x))))))
 
-(defn consumer-seq [consumer buf-seq]
+(defn frame-seq [reader buf-seq]
   (loop [result [], buf-seq buf-seq]
-    (let [[x xs] (feed consumer buf-seq)]
-      (if-not (consumer? x)
+    (let [[x xs] (read-bytes reader buf-seq)]
+      (if-not (reader? x)
 	(recur (conj result x) xs)
 	result))))
 
-(defn consume-and-continue [consumer callback]
-  (reify ByteConsumer
-    (feed [this buf-seq]
-      (let [[x bytes :as result] (feed consumer buf-seq)]
-	(if (consumer? x)
+(defn read-comp [codec callback]
+  (reify
+    Reader
+    (read-bytes [this buf-seq]
+      (let [[x bytes :as result] (read-bytes codec buf-seq)]
+	(if (reader? x)
 	  [this bytes]
-	  (callback result))))))
+	  (callback result))))
+    UnboundedWriter
+    (create-buf [this val]
+      (write-bytes codec val))))

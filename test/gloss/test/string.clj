@@ -9,7 +9,6 @@
 (ns gloss.test.string
   (:use
     [gloss.data bytes string]
-    [gloss io]
     [gloss.core protocols]
     [clojure test]))
 
@@ -23,24 +22,19 @@
 (defn segments [interval]
   (split-str interval pilchards))
 
-(defn concat-and-verify [f]
-  (fn [s b]
-    (is (= s (f s)))
-    (concat-bytes s b)))
-
 (deftest test-string-consumer
   (doseq [i (range 1 61)]
     (when (zero? (rem 60 i))
       (let [segments (split-str i pilchards)
-	    consumer (string-handler "utf-8")]
-	(is (= pilchards-string (apply str (consumer-seq consumer segments))))))))
+	    consumer (string-codec "utf-8")]
+	(is (= pilchards-string (apply str (frame-seq consumer segments))))))))
 
 (deftest test-finite-string-consumer
   (let [divisors (filter #(zero? (rem 30 %)) (range 1 61))
 	pilchar (first "¶")]
     (doseq [buf-interval divisors]
       (doseq [string-interval divisors]
-	(let [strs (consumer-seq (finite-string-handler "utf-8" string-interval) (split-str buf-interval pilchards))]
+	(let [strs (frame-seq (finite-string-codec "utf-8" string-interval) (split-str buf-interval pilchards))]
 	  (is (every? #(= string-interval (count %)) strs))
 	  (is (= 30 (count (apply str strs)))))))))
 

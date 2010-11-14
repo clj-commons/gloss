@@ -14,11 +14,6 @@
      Buffer
      ByteBuffer]))
 
-(defprotocol BufferSeqWrapper
-  (buffer-seq [s])
-  (remainder-bytes [s])
-  (concat-bytes [s bytes]))
-
 (defn byte-buffer [s]
   (if (string? s)
     (ByteBuffer/wrap (.getBytes ^String s "utf-8"))
@@ -130,30 +125,34 @@
 		(drop-bytes (+ location delimiter-count) buf-seq)])
 	     (recur (advance s))))))))
 
-(defn finite-byte-handler
+(defn finite-byte-codec
   [bytes len]
   (reify
-    ByteConsumer
-    (feed [this b]
+    Reader
+    (read-bytes [this b]
       (if (< (buf-seq-count b) len)
 	[this bytes]
 	[(take-bytes len b) (drop-bytes len b)]))
-    ByteEmitter
-    (emit [this buf-seq]
-      buf-seq)))
+    BoundedWriter
+    (size [this]
+      len)
+    (write-to-buf [this buf buf-seq]
+      (doseq [b buf-seq]
+	(.put ^ByteBuffer buf ^ByteBuffer b))
+      buf)))
 
-(defn delimited-byte-handler
+(defn delimited-byte-codec
   [bytes delimiters strip-delimiters?]
   (reify
-    ByteConsumer
-    (feed [this b]
+    Reader
+    (read-bytes [this b]
       (let [[x xs] (take-delimited-bytes bytes delimiters strip-delimiters?)]
 	(if x
 	  [(concat bytes x) xs]
-	  [(delimited-byte-handler xs delimiters strip-delimiters?)
+	  [(delimited-byte-codec xs delimiters strip-delimiters?)
 	   nil])))
-    ByteEmitter
-    (emit [this buf-seq]
+    UnboundedWriter
+    (create-buf [this buf-seq]
       (concat buf-seq [(first delimiters)]))))
 
  

@@ -18,14 +18,14 @@
 (defn has-bytes [n buf-seq]
   (< (.remaining ^Buffer (first buf-seq)) n))
 
-(defmacro primitive-handler [accessor writer size]
+(defmacro primitive-codec [accessor writer size typecast transform-fn]
   `(reify
-     ByteConsumer
-     (feed [this# buf-seq#]
+     Reader
+     (read-bytes [this# buf-seq#]
        (cond
 
 	 (has-bytes ~size buf-seq#)
-	 [(~accessor ^ByteBuffer (first buf-seq#))]
+	 [(~accessor ^ByteBuffer (first buf-seq#)) buf-seq#]
 
 	 (< (buf-seq-count buf-seq#) ~size)
 	 [this# buf-seq#]
@@ -33,16 +33,19 @@
 	 :else
 	 [(~accessor ^ByteBuffer (take-contiguous-bytes ~size buf-seq#))
 	  (drop-bytes ~size buf-seq#)]))
-     ByteWriter
+     BoundedWriter
      (size [_]
        ~size)
-     (write [_ buf# val#]
-       (~writer ^ByteBuffer buf# val#))))
+     (write-to-buf [_ buf# val#]
+       (~writer ^ByteBuffer buf# (~typecast (~transform-fn val#))))
 
-(def primitive-handlers
-  {:byte (primitive-handler .get .put 1)
-   :int16 (primitive-handler .getShort .putShort 2)
-   :int32 (primitive-handler .getInt .putInt 4)
-   :int64 (primitive-handler .getLong .putLong 8)
-   :float32 (primitive-handler .getFloat .putFloat 4)
-   :float64 (primitive-handler .getDouble .putDouble 8)})
+     (toString [_]
+       ~(str typecast))))
+
+(def primitive-codecs
+  {:byte (primitive-codec .get .put 1 byte identity) 
+   :int16 (primitive-codec .getShort .putShort 2 short identity)
+   :int32 (primitive-codec .getInt .putInt 4 int identity)
+   :int64 (primitive-codec .getLong .putLong 8 long identity)
+   :float32 (primitive-codec .getFloat .putFloat 4 float identity)
+   :float64 (primitive-codec .getDouble .putDouble 8 double identity)})

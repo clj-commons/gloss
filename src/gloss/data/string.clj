@@ -9,8 +9,7 @@
 (ns gloss.data.string
   (:use
     [gloss.data bytes]
-    [gloss.core protocols]
-    [gloss io])
+    [gloss.core protocols])
   (:import
     [java.nio
      Buffer
@@ -91,25 +90,25 @@
 	      :else
 	      (recur (rest bytes)))))))))
 
-(defn finite-string-handler- [charset len decoder char-buf]
+(defn finite-string-codec- [charset len decoder char-buf]
   (reify
-    ByteConsumer
-    (feed [this buf-seq]
+    Reader
+    (read-bytes [this buf-seq]
       (let [decoder (or decoder (create-decoder charset))
 	    char-buf (or char-buf (CharBuffer/allocate len))
 	    [chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
 	(if-not (.hasRemaining chars)
 	  [(.rewind ^CharBuffer chars) bytes]
-	  [(finite-string-handler- charset len decoder char-buf) buf-seq])))
-    ByteEmitter
-    (emit [this strs]
+	  [(finite-string-codec- charset len decoder char-buf) buf-seq])))
+    UnboundedWriter
+    (create-buf [this strs]
       (let [encoder (create-encoder charset)]
 	(apply concat
 	  (map #(.encode encoder (to-char-buffer %)) strs))))))
 
-(defn finite-string-handler
+(defn finite-string-codec
   [charset len]
-  (finite-string-handler- charset len nil nil))
+  (finite-string-codec- charset len nil nil))
 
 ;;;
 
@@ -137,15 +136,15 @@
 	    :else
 	    (recur chars (rest bytes))))))))
 
-(defn string-handler [charset]
+(defn string-codec [charset]
   (reify
-    ByteConsumer
-    (feed [this buf-seq]
+    Reader
+    (read-bytes [this buf-seq]
       (let [decoder (create-decoder charset)
 	    [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
 	(if (zero? (buf-seq-count chars))
 	  [this buf-seq]
 	  [(create-char-buf-seq chars) bytes])))
-    ByteEmitter
-    (emit [this s]
+    UnboundedWriter
+    (create-buf [this s]
       (.encode (create-encoder charset) (to-char-buffer s)))))
