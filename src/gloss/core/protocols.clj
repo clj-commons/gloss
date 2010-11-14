@@ -6,13 +6,27 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.consumer
-  (:import
-    [java.nio
-     ByteBuffer]))
+(ns gloss.core.protocols
+  (:import [java.nio Buffer ByteBuffer]))
 
 (defprotocol ByteConsumer
-  (feed- [this buf-seq]))
+  (feed [this buf-seq]))
+
+(defprotocol ByteEmitter
+  (emit [this val]))
+
+(defprotocol ByteWriter
+  (size [this])
+  (write [this buf val]))
+
+(defn consumer? [x]
+  (satisfies? ByteConsumer x))
+
+(defn writer? [x]
+  (satisfies? ByteWriter x))
+
+(defn emitter? [x]
+  (satisfies? ByteEmitter x))
 
 (def byte-array-class (class (byte-array [])))
 
@@ -22,13 +36,7 @@
       (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x
       (= (class x) byte-array-class) [(ByteBuffer/wrap x)]
       (instance? ByteBuffer x) [x]
-      :else (throw (Exception. (str "Cannot convert to buffer-seq: " x))))))
-
-(defn feed [consumer bytes]
-  (feed- consumer (to-buf-seq bytes)))
-
-(defn consumer? [x]
-  (satisfies? ByteConsumer x))
+      :else (throw (Exception. (str "Cannot convert to buf-seq: " x))))))
 
 (defn consumer-seq [consumer buf-seq]
   (loop [result [], buf-seq buf-seq]
@@ -36,3 +44,11 @@
       (if-not (consumer? x)
 	(recur (conj result x) xs)
 	result))))
+
+(defn consume-and-continue [consumer callback]
+  (reify ByteConsumer
+    (feed [this buf-seq]
+      (let [[x bytes :as result] (feed consumer buf-seq)]
+	(if (consumer? x)
+	  [this bytes]
+	  (callback result))))))

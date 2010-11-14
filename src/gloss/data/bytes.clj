@@ -6,9 +6,9 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.bytes
+(ns gloss.data.bytes
   (:use
-    gloss.consumer)
+    gloss.core.protocols)
   (:import
     [java.nio
      Buffer
@@ -23,6 +23,10 @@
   (if (string? s)
     (ByteBuffer/wrap (.getBytes ^String s "utf-8"))
     (ByteBuffer/wrap (byte-array (map byte s)))))
+
+(defn write-buf-seq [buf-seq buf]
+  (doseq [b buf-seq]
+    (.put ^ByteBuffer buf b)))
 
 (defn rewind-buf-seq [buf-seq]
   (concat
@@ -126,15 +130,30 @@
 		(drop-bytes (+ location delimiter-count) buf-seq)])
 	     (recur (advance s))))))))
 
-(defn delimited-byte-consumer
-  ([bytes delimiters strip-delimiters?]
-     (reify
-       ByteConsumer
-       (feed- [this b]
-	 (let [[x xs] (take-delimited-bytes bytes delimiters strip-delimiters?)]
-	   (if x
-	     [(concat bytes x) xs]
-	     [(delimited-byte-consumer xs delimiters strip-delimiters?)
-	      nil]))))))
+(defn finite-byte-handler
+  [bytes len]
+  (reify
+    ByteConsumer
+    (feed [this b]
+      (if (< (buf-seq-count b) len)
+	[this bytes]
+	[(take-bytes len b) (drop-bytes len b)]))
+    ByteEmitter
+    (emit [this buf-seq]
+      buf-seq)))
+
+(defn delimited-byte-handler
+  [bytes delimiters strip-delimiters?]
+  (reify
+    ByteConsumer
+    (feed [this b]
+      (let [[x xs] (take-delimited-bytes bytes delimiters strip-delimiters?)]
+	(if x
+	  [(concat bytes x) xs]
+	  [(delimited-byte-handler xs delimiters strip-delimiters?)
+	   nil])))
+    ByteEmitter
+    (emit [this buf-seq]
+      (concat buf-seq [(first delimiters)]))))
 
  

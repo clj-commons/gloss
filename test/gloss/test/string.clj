@@ -8,7 +8,9 @@
 
 (ns gloss.test.string
   (:use
-    [gloss bytes string consumer]
+    [gloss.data bytes string]
+    [gloss io]
+    [gloss.core protocols]
     [clojure test]))
 
 (defn split-str [interval bytes]
@@ -30,7 +32,7 @@
   (doseq [i (range 1 61)]
     (when (zero? (rem 60 i))
       (let [segments (split-str i pilchards)
-	    consumer (string-consumer "utf-8")]
+	    consumer (string-handler "utf-8")]
 	(is (= pilchards-string (apply str (consumer-seq consumer segments))))))))
 
 (deftest test-finite-string-consumer
@@ -38,7 +40,7 @@
 	pilchar (first "¶")]
     (doseq [buf-interval divisors]
       (doseq [string-interval divisors]
-	(let [strs (consumer-seq (finite-string-consumer "utf-8" string-interval) (split-str buf-interval pilchards))]
+	(let [strs (consumer-seq (finite-string-handler "utf-8" string-interval) (split-str buf-interval pilchards))]
 	  (is (every? #(= string-interval (count %)) strs))
 	  (is (= 30 (count (apply str strs)))))))))
 

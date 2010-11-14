@@ -7,7 +7,7 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.test.bytes
-  (:use [gloss bytes])
+  (:use [gloss.data bytes])
   (:use [clojure test])
   (:import [java.nio ByteBuffer]))
 
@@ -32,7 +32,7 @@
     (dotimes [i 101]
       (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes i bufs)))))))
 
-(defn test-split [split-location skip-bytes source split]
+(defn- test-split [split-location skip-bytes source split]
   (let [s (mapcat byte-seq source)
 	split (map #(mapcat byte-seq %) split)]
     (if (<= split-location (count s))

@@ -6,9 +6,11 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.string
+(ns gloss.data.string
   (:use
-    [gloss bytes consumer])
+    [gloss.data bytes]
+    [gloss.core protocols]
+    [gloss io])
   (:import
     [java.nio
      Buffer
@@ -41,6 +43,9 @@
 (defn- create-decoder [charset]
   (.newDecoder (Charset/forName charset)))
 
+(defn- create-encoder [charset]
+  (.newEncoder (Charset/forName charset)))
+
 (defn create-char-buf-seq [chars]
   (let [length (apply + (map #(.remaining ^CharBuffer %) chars))]
     (reify
@@ -53,6 +58,11 @@
       
       clojure.lang.Counted
       (count [_] length))))
+
+(defn to-char-buffer [x]
+  (if (instance? CharBuffer x)
+    x
+    (CharBuffer/wrap x)))
 
 ;;;
 
@@ -81,20 +91,25 @@
 	      :else
 	      (recur (rest bytes)))))))))
 
-(defn finite-string-consumer- [decoder char-buf]
+(defn finite-string-handler- [charset len decoder char-buf]
   (reify
     ByteConsumer
-    (feed- [this buf-seq]
-      (let [[chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
+    (feed [this buf-seq]
+      (let [decoder (or decoder (create-decoder charset))
+	    char-buf (or char-buf (CharBuffer/allocate len))
+	    [chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
 	(if-not (.hasRemaining chars)
 	  [(.rewind ^CharBuffer chars) bytes]
-	  [this buf-seq])))))
+	  [(finite-string-handler- charset len decoder char-buf) buf-seq])))
+    ByteEmitter
+    (emit [this strs]
+      (let [encoder (create-encoder charset)]
+	(apply concat
+	  (map #(.encode encoder (to-char-buffer %)) strs))))))
 
-(defn finite-string-consumer
+(defn finite-string-handler
   [charset len]
-  (let [decoder (create-decoder charset)
-	char-buf (CharBuffer/allocate len)]
-    (finite-string-consumer- decoder char-buf)))
+  (finite-string-handler- charset len nil nil))
 
 ;;;
 
@@ -122,12 +137,15 @@
 	    :else
 	    (recur chars (rest bytes))))))))
 
-(defn string-consumer [charset]
-  (let [decoder (create-decoder charset)]
-    (reify
-      ByteConsumer
-      (feed- [this buf-seq]
-	(let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
-	  (if (zero? (buf-seq-count chars))
-	    [this buf-seq]
-	    [(create-char-buf-seq chars) bytes]))))))
+(defn string-handler [charset]
+  (reify
+    ByteConsumer
+    (feed [this buf-seq]
+      (let [decoder (create-decoder charset)
+	    [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
+	(if (zero? (buf-seq-count chars))
+	  [this buf-seq]
+	  [(create-char-buf-seq chars) bytes])))
+    ByteEmitter
+    (emit [this s]
+      (.encode (create-encoder charset) (to-char-buffer s)))))
