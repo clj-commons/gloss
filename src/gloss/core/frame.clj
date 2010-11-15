@@ -10,14 +10,14 @@
   (:use
     [clojure.walk]
     [gloss.core protocols]
-    [gloss.data primitives])
+    [gloss.data primitives bytes])
   (:require
     [clojure.zip :as z])
   (:import
     [java.nio
      ByteBuffer]))
 
-(declare compile-frame)
+(declare compile-frame-)
 
 ;;;
 
@@ -102,7 +102,7 @@
   (let [k (sort (keys m))
 	frame (interleave k (map #(% m) k))
 	codec (read-comp
-		(compile-frame frame)
+		(compile-frame- frame)
 		(fn [[v b]] [(apply hash-map v) b]))]
     (reify
       Reader
@@ -113,7 +113,7 @@
 	(write-bytes codec (interleave k (map #(% val) k)))))))
 
 (defn compile-maps [frame]
-  (prewalk
+  (postwalk
     #(if (map? %)
        (map-codec %)
        %)
@@ -128,25 +128,26 @@
   (let [w (->> frame
 	    flatten-frame
 	    (filter writer?))]
-    (and (pos? (count w)) (every? bounded-writer? w))))
+    (and (< 1 (count w)) (every? bounded-writer? w))))
 
 (defn bounded-writers-codec [frame]
   (let [writers (filter writer? (flatten-frame frame))
-	len (apply + (map size writers))]
+	len (apply + (map size writers))
+	codec (->> frame
+		compile-maps
+		compile-frame-)]
     (reify
       Reader
       (read-bytes [this buf-seq]
-	(scatter-values frame buf-seq))
+	(read-bytes codec buf-seq))
       UnboundedWriter
       (create-buf [this val]
-	(let [buf (ByteBuffer/allocate len)]
-	  [(.rewind ^ByteBuffer
-	     (reduce
-	       (fn [b [w v]] (write-to-buf w b v))
-	       buf
-	       (gather-values frame val)))])))))
+	(binding [*current-buffer* (ByteBuffer/allocate len)]
+	  (doseq [[w v] (gather-values codec val)]
+	    (write-bytes w v))
+	  [(.rewind *current-buffer*)])))))
 
-(defn compile-contiguous-writers [frame]
+(defn compile-contiguous-bounded-writers [frame]
   (prewalk
     #(if (contiguous-bounded-writers? %)
        (bounded-writers-codec %)
@@ -155,11 +156,8 @@
 
 ;;;
 
-(defn compile-frame [f]
-  (let [frame (->> f
-		compile-primitives
-		compile-maps
-		compile-contiguous-writers)]
+(defn compile-frame- [f]
+  (let [frame f]
     (reify
       Reader
       (read-bytes [this buf-seq]
@@ -169,3 +167,16 @@
 	(mapcat
 	  (fn [[w v]] (write-bytes w v))
 	  (gather-values frame val))))))
+
+(defn preprocess-frame [f]
+  (->> f
+    compile-primitives
+    compile-contiguous-bounded-writers
+    compile-maps))
+
+(defn compile-frame [f]
+  (->> f
+    preprocess-frame
+    compile-frame-))
+
+

@@ -31,12 +31,16 @@
 (defn writer? [x]
   (or (bounded-writer? x) (unbounded-writer? x)))
 
+(def *current-buffer* nil)
+
 (defn write-bytes [codec val]
   (cond
     (bounded-writer? codec)
-    (let [buf (ByteBuffer/allocate (size codec))]
-      (write-to-buf codec buf val)
-      [(.rewind ^ByteBuffer buf)])
+    (if *current-buffer*
+      (write-to-buf codec *current-buffer* val)
+      (let [buf (ByteBuffer/allocate (size codec))]
+       (write-to-buf codec buf val)
+       [(.rewind ^ByteBuffer buf)]))
 
     (unbounded-writer? codec)
     (create-buf codec val)))
