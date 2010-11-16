@@ -9,7 +9,7 @@
 (ns gloss.data.string
   (:use
     [gloss.data bytes]
-    [gloss.core protocols])
+    [gloss.core protocols formats])
   (:import
     [java.nio
      Buffer

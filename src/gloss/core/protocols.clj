@@ -7,7 +7,10 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.core.protocols
+  (:use [gloss.core formats])
   (:import [java.nio Buffer ByteBuffer]))
+
+;;;
 
 (defprotocol Reader
   (read-bytes [this buf-seq]))
@@ -16,7 +19,7 @@
   (create-buf [this val]))
 
 (defprotocol BoundedWriter
-  (size [this])
+  (sizeof [this val])
   (write-to-buf [this buf val]))
 
 (defn reader? [x]
@@ -31,6 +34,8 @@
 (defn writer? [x]
   (or (bounded-writer? x) (unbounded-writer? x)))
 
+;;;
+
 (def *current-buffer* nil)
 
 (defn write-bytes [codec val]
@@ -38,22 +43,12 @@
     (bounded-writer? codec)
     (if *current-buffer*
       (write-to-buf codec *current-buffer* val)
-      (let [buf (ByteBuffer/allocate (size codec))]
-       (write-to-buf codec buf val)
-       [(.rewind ^ByteBuffer buf)]))
+      (let [buf (ByteBuffer/allocate (sizeof codec val))]
+	(write-to-buf codec buf val)
+	[(.rewind ^ByteBuffer buf)]))
 
     (unbounded-writer? codec)
     (create-buf codec val)))
-
-(def byte-array-class (class (byte-array [])))
-
-(defn to-buf-seq [x]
-  (when x
-    (cond
-      (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x
-      (= (class x) byte-array-class) [(ByteBuffer/wrap x)]
-      (instance? ByteBuffer x) [x]
-      :else (throw (Exception. (str "Cannot convert to buf-seq: " x))))))
 
 (defn frame-seq [reader buf-seq]
   (loop [result [], buf-seq buf-seq]
@@ -62,14 +57,42 @@
 	(recur (conj result x) xs)
 	result))))
 
-(defn read-comp [codec callback]
+(defn- read-callback [codec callback]
   (reify
     Reader
     (read-bytes [this buf-seq]
       (let [[x bytes :as result] (read-bytes codec buf-seq)]
 	(if (reader? x)
 	  [this bytes]
-	  (callback result))))
+	  (apply callback result))))
     UnboundedWriter
-    (create-buf [this val]
+    (create-buf [_ val]
       (write-bytes codec val))))
+
+(defn compose-readers [codec & readers]
+  (let [readers (map
+		  (fn [rd]
+		    (if (satisfies? Reader rd)
+		      #(apply read-bytes rd %)
+		      rd))
+		  readers)]
+    (reduce read-callback codec readers)))
+
+;;;
+
+(defn header [sig header->body body->header]
+  (let [codec (compose-readers
+		sig
+		(fn [v b]
+		  (let [body (header->body v)]
+		    (read-bytes body b))))]
+    (reify
+      Reader
+      (read-bytes [_ buf-seq]
+	(read-bytes codec buf-seq))
+      UnboundedWriter
+      (create-buf [_ val]
+	(let [header (body->header val)]
+	  (concat
+	    (write-bytes sig (body->header val))
+	    (write-bytes (header->body header) val)))))))

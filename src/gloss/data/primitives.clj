@@ -34,7 +34,7 @@
 	 [(~accessor ^ByteBuffer (take-contiguous-bytes ~size buf-seq#))
 	  (drop-bytes ~size buf-seq#)]))
      BoundedWriter
-     (size [_]
+     (sizeof [_ _]
        ~size)
      (write-to-buf [_ buf# val#]
        (~writer ^ByteBuffer buf# (~typecast (~transform-fn val#))))

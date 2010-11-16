@@ -101,9 +101,9 @@
 (defn map-codec [m]
   (let [k (sort (keys m))
 	frame (interleave k (map #(% m) k))
-	codec (read-comp
+	codec (compose-readers
 		(compile-frame- frame)
-		(fn [[v b]] [(apply hash-map v) b]))]
+		(fn [v b] [(apply hash-map v) b]))]
     (reify
       Reader
       (read-bytes [this buf-seq]
@@ -122,45 +122,39 @@
 ;;;
 
 (defn flatten-frame [frame]
-  (flatten (postwalk #(if (map? %) (seq %) %) frame)))
-
-(defn contiguous-bounded-writers? [frame]
-  (let [w (->> frame
-	    flatten-frame
-	    (filter writer?))]
-    (and (< 1 (count w)) (every? bounded-writer? w))))
-
-(defn bounded-writers-codec [frame]
-  (let [writers (filter writer? (flatten-frame frame))
-	len (apply + (map size writers))
-	codec (->> frame
-		compile-maps
-		compile-frame-)]
-    (reify
-      Reader
-      (read-bytes [this buf-seq]
-	(read-bytes codec buf-seq))
-      UnboundedWriter
-      (create-buf [this val]
-	(binding [*current-buffer* (ByteBuffer/allocate len)]
-	  (doseq [[w v] (gather-values codec val)]
-	    (write-bytes w v))
-	  [(.rewind *current-buffer*)])))))
-
-(defn compile-contiguous-bounded-writers [frame]
-  (prewalk
-    #(if (contiguous-bounded-writers? %)
-       (bounded-writers-codec %)
-       %)
+  (if (or (sequential? frame) (map? frame))
+    (flatten (postwalk #(if (map? %) (seq %) %) frame))
     frame))
 
-;;;
+(defn contiguous-bounded-writers? [frame]
+  (if-not (or (sequential? frame) (map? frame))
+    (bounded-writer? frame)
+    (let [w (->> frame
+	      flatten-frame
+	      (filter writer?))
+	  cnt (count w)]
+      (and
+	(pos? cnt)
+	(every? bounded-writer? w)))))
 
-(defn compile-frame- [f]
-  (let [frame f]
+(defn compile-frame- [frame]
+  (if (contiguous-bounded-writers? frame)
     (reify
       Reader
-      (read-bytes [this buf-seq]
+      (read-bytes [_ buf-seq]
+	(scatter-values frame buf-seq))
+      BoundedWriter
+      (sizeof [_ val]
+	(apply +
+	  (map
+	    #(apply sizeof %)
+	    (gather-values frame val))))
+      (write-to-buf [_ buf val]
+	(doseq [[w v] (gather-values frame val)]
+	  (write-to-buf w buf v))))
+    (reify
+      Reader
+      (read-bytes [_ buf-seq]
 	(scatter-values frame buf-seq))
       UnboundedWriter
       (create-buf [this val]
@@ -171,7 +165,6 @@
 (defn preprocess-frame [f]
   (->> f
     compile-primitives
-    compile-contiguous-bounded-writers
     compile-maps))
 
 (defn compile-frame [f]

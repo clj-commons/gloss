@@ -9,7 +9,7 @@
 (ns gloss.test.string
   (:use
     [gloss.data bytes string]
-    [gloss.core protocols]
+    [gloss.core protocols formats]
     [clojure test]))
 
 (defn split-str [interval bytes]

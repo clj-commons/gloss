@@ -8,7 +8,7 @@
 
 (ns gloss.data.bytes
   (:use
-    gloss.core.protocols)
+    [gloss.core formats protocols])
   (:import
     [java.nio
      Buffer
@@ -21,7 +21,7 @@
 
 (defn write-buf-seq [buf-seq buf]
   (doseq [b buf-seq]
-    (.put ^ByteBuffer buf b)))
+    (.put ^ByteBuffer buf ^ByteBuffer b)))
 
 (defn rewind-buf-seq [buf-seq]
   (concat
@@ -125,8 +125,20 @@
 		(drop-bytes (+ location delimiter-count) buf-seq)])
 	     (recur (advance s))))))))
 
+;;;
+
+(defn take-all [codec]
+  (fn [byte-seq remainder]
+    (loop [byte-seq byte-seq, s []]
+      (if (empty? byte-seq)
+	[s remainder]
+	(let [[v b] (read-bytes codec byte-seq)]
+	  (when (reader? v)
+	    (throw (Exception. "Cannot evenly divide byte-sequence")))
+	  (recur b (conj s v)))))))
+
 (defn finite-byte-codec
-  [bytes len]
+  [len]
   (reify
     Reader
     (read-bytes [this b]
@@ -134,25 +146,69 @@
 	[this bytes]
 	[(take-bytes len b) (drop-bytes len b)]))
     BoundedWriter
-    (size [this]
+    (sizeof [_ _]
       len)
     (write-to-buf [this buf buf-seq]
-      (doseq [b buf-seq]
-	(.put ^ByteBuffer buf ^ByteBuffer b))
-      buf)))
+      (write-buf-seq buf-seq buf))))
+
+(defn wrap-finite-codec
+  [codec len]
+  (let [finite-codec (compose-readers
+		       (finite-byte-codec len)
+		       (take-all codec))]
+    (if (bounded-writer? codec)
+      (reify
+	Reader
+	(read-bytes [_ b]
+	  (read-bytes finite-codec b))
+	BoundedWriter
+	(sizeof [_ _]
+	  len)
+	(write-to-buf [_ buf vals]
+	  (doseq [v vals]
+	    (write-to-buf finite-codec buf v))))
+      (reify
+	Reader
+	(read-bytes [this b]
+	  (read-bytes finite-codec b))
+	BoundedWriter
+	(sizeof [_ _]
+	  len)
+	(write-to-buf [_ buf buf-seq]
+	  (write-buf-seq buf-seq buf))))))
+
+;;;
 
 (defn delimited-byte-codec
-  [bytes delimiters strip-delimiters?]
-  (reify
-    Reader
-    (read-bytes [this b]
-      (let [[x xs] (take-delimited-bytes bytes delimiters strip-delimiters?)]
-	(if x
-	  [(concat bytes x) xs]
-	  [(delimited-byte-codec xs delimiters strip-delimiters?)
-	   nil])))
-    UnboundedWriter
-    (create-buf [this buf-seq]
-      (concat buf-seq [(first delimiters)]))))
+  [delimiters strip-delimiters?]
+  (let [sizeof-delimiter (.remaining ^ByteBuffer (first delimiters))]
+    (reify
+      Reader
+      (read-bytes [this b]
+	(let [[x xs] (take-delimited-bytes bytes delimiters strip-delimiters?)]
+	  (if x
+	    [(concat bytes x) xs]
+	    [(delimited-byte-codec xs delimiters strip-delimiters?)
+	     nil])))
+      BoundedWriter
+      (sizeof [_ buf-seq]
+	(+ (buf-seq-count buf-seq) sizeof-delimiter))
+      (write-to-buf [this buf buf-seq]
+	(write-buf-seq (concat buf-seq (take 1 delimiters)) buf)))))
+
+(defn wrap-delimited-codec
+  [codec delimiters strip-delimiters?]
+  (let [delimited-codec (compose-readers
+			  (delimited-byte-codec delimiters strip-delimiters?)
+			  (take-all codec))]
+    (reify
+      Reader
+      (read-bytes [_ b]
+	(read-bytes delimited-codec b))
+      BoundedWriter
+      (sizeof [_ buf-seq]
+	(sizeof delimited-codec buf-seq))
+      (write-to-buf [_ buf val]
+	(write-to-buf delimited-codec buf val)))))
 
  
