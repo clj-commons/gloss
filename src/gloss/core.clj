@@ -24,7 +24,13 @@
 (import-fn #'formats/to-buf-seq)
 (import-fn #'pr/read-bytes)
 (import-fn #'pr/write-bytes)
-(import-fn #'pr/sizeof)
+
+(defn sizeof [frame value]
+  (when (pr/bounded-writer? frame)
+    (pr/sizeof frame value)))
+
+(defn delimited-block [delimiters frame]
+  (bytes/delimited-block delimiters false (compile-frame frame)))
 
 (defn string
   [charset & {:as options}]
@@ -34,56 +40,30 @@
       (string/finite-string-codec charset (:length options))
 
       (:delimiters options)
-      (bytes/wrap-delimited-codec
+      (bytes/delimited-block
 	(string/string-codec charset)
-	(map to-byte-buffer (:delimiters options))
-	(or (:strip-delimiters? options) true))
+	(map to-byte-buffer (:delimiters options)))
 
       :else
       (string/string-codec charset))))
 
-(defn header [sig header->body body->header]
+(defn header [frame header->body body->header]
   (pr/header
-    (compile-frame sig)
+    (compile-frame frame)
     header->body
     body->header))
 
-(defn- repeated-reader [codec len vals]
-  (reify
-    pr/Reader
-    (read-bytes [_ buf-seq]
-      (loop [buf-seq buf-seq, vals vals]
-	(if (= (count vals) len)
-	  [vals buf-seq]
-	  (let [[v b] (read-bytes codec buf-seq)]
-	    (if (pr/reader? v)
-	      [(repeated-reader codec len vals) b]
-	      (recur b (conj vals v)))))))))
+;;;
 
-(defn- prefix-repeated
-  [codec]
-  (let [codec* (pr/compose-readers
-		 (:int32 prim/primitive-codecs)
-		 (fn [len b]
-		   (read-bytes (repeated-reader codec len []) b)))]
-    (if (pr/bounded-writer? codec)
-     (reify
-       pr/Reader
-       (read-bytes [_ buf-seq]
-	 (read-bytes codec* buf-seq))
-       pr/BoundedWriter
-       (sizeof [_ vals]
-	 (+ 4 (apply + (map #(sizeof codec %) vals))))
-       (write-to-buf [_ buf vals]
-	 (.putInt ^ByteBuffer buf (count vals))
-	 (doseq [v vals]
-	   (pr/write-to-buf codec buf v))))
-     (reify
-       pr/Reader
-       (read-bytes [_ buf-seq]
-	 (read-bytes codec* buf-seq))
-       pr/UnboundedWriter
-       (create-buf [_ vals]
-	 (cons
-	   (-> (ByteBuffer/allocate 4) (.putInt (count vals)) .rewind)
-	   (apply concat (map #(write-bytes codec %) vals))))))))
+(defn repeated [frame & {:as options}]
+  (let [codec (compile-frame frame)]
+    (cond
+      (:delimiters options)
+      (bytes/wrap-delimited-sequence
+	codec
+	(map to-byte-buffer (:delimiters options)))
+      
+      :else
+      (pr/wrap-prefix-repeated
+	((or (:prefix options) :int32) prim/primitive-codecs)
+	codec))))

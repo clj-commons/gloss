@@ -15,6 +15,10 @@
   (let [f (compile-frame f)]
     (is (= val (first (read-bytes f (write-bytes f val)))))))
 
+(defn test-transformed-roundtrip [f transform val]
+  (let [f (compile-frame f)]
+    (is (= val (transform (first (read-bytes f (write-bytes f val))))))))
+
 (deftest test-lists
   (test-roundtrip
     [:float32 :float32]
@@ -40,4 +44,23 @@
     [{:a :int32} {:b [:float64 :float32]}]
     [{:a 1} {:b [2 3]}]))
 
+(deftest test-repeated
+  (test-roundtrip
+    (repeated :int32)
+    (range 1000))
+  (test-roundtrip
+    (repeated [:byte :byte])
+    (partition 2 (range 100)))
+  (test-roundtrip
+    (repeated :byte :delimiters [127])
+    (range 100)))
 
+(deftest test-string
+  (test-transformed-roundtrip
+    (string :utf-8)
+    str
+    "abcd")
+  (test-transformed-roundtrip
+    (repeated (string :utf-8 :delimiters ["\0"]))
+    #(map str %)
+    ["abc" "def"]))

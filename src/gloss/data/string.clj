@@ -147,4 +147,4 @@
 	  [(create-char-buf-seq chars) bytes])))
     UnboundedWriter
     (create-buf [this s]
-      (.encode (create-encoder charset) (to-char-buffer s)))))
+      [(.encode (create-encoder charset) (to-char-buffer s))])))

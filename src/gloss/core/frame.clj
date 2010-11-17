@@ -168,8 +168,10 @@
     compile-maps))
 
 (defn compile-frame [f]
-  (->> f
-    preprocess-frame
-    compile-frame-))
+  (if (reader? f)
+    f
+    (->> f
+     preprocess-frame
+     compile-frame-)))
 
 

@@ -69,19 +69,20 @@
 (defn take-contiguous-bytes
   "Returns a single ByteBuffer which contains the first 'n' bytes of the buffer-sequence."
   [n bytes]
-  (let [buf-seq (to-buf-seq bytes)
-	first-buf ^ByteBuffer (first buf-seq)]
-    (if (> (.remaining first-buf) n)
-      (-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)
-      (when (<= n (buf-seq-count buf-seq))
-	(let [ary (byte-array n)]
-	  (loop [offset 0, s buf-seq]
-	    (if (>= offset n)
-	      (ByteBuffer/wrap ary)
-	      (let [buf ^ByteBuffer (first s)
-		    take-bytes (min (.remaining buf) (- n offset))]
-		(-> buf .duplicate (.get ary offset take-bytes))
-		(recur (+ offset take-bytes) (rest s))))))))))
+  (when-not (empty? bytes)
+    (let [buf-seq (to-buf-seq bytes)
+	  first-buf ^ByteBuffer (first buf-seq)]
+      (if (> (.remaining first-buf) n)
+	(-> first-buf .duplicate (.limit (+ (.position first-buf) n)) .slice)
+	(when (and (pos? n) (<= n (buf-seq-count buf-seq)))
+	  (let [ary (byte-array n)]
+	    (loop [offset 0, s buf-seq]
+	      (if (>= offset n)
+		(ByteBuffer/wrap ary)
+		(let [buf ^ByteBuffer (first s)
+		      take-bytes (min (.remaining buf) (- n offset))]
+		  (-> buf .duplicate (.get ary offset take-bytes))
+		  (recur (+ offset take-bytes) (rest s)))))))))))
 
 (defn take-bytes
   "Returns a buffer-sequence containing the first 'n' bytes of the given buffer-sequence."
@@ -107,7 +108,7 @@
 		       (if (.hasRemaining buf)
 			 s
 			 (rest s))))]
-       (loop [s (map #(.duplicate ^ByteBuffer %) buf-seq)]
+       (loop [s (dup-buf-seq buf-seq)]
 	 (if (empty? s)
 	   [nil buf-seq]
 	   (if-let [delimiter (some
@@ -118,9 +119,9 @@
 				      (= 1 (.remaining delimiter))
 				      (= delimiter (take-contiguous-bytes (.remaining delimiter) s)))
 				    delimiter))
-				delimiters)]
+				(dup-buf-seq delimiters))]
 	     (let [location (- (buf-seq-count buf-seq) (buf-seq-count s))
-		   delimiter-count (.remaining ^ByteBuffer delimiter)]
+		   delimiter-count (-> ^ByteBuffer delimiter .rewind .remaining)]
 	       [(take-bytes (+ location (if strip-delimiters? 0 delimiter-count)) buf-seq)
 		(drop-bytes (+ location delimiter-count) buf-seq)])
 	     (recur (advance s))))))))
@@ -143,7 +144,7 @@
     Reader
     (read-bytes [this b]
       (if (< (buf-seq-count b) len)
-	[this bytes]
+	[this b]
 	[(take-bytes len b) (drop-bytes len b)]))
     BoundedWriter
     (sizeof [_ _]
@@ -180,35 +181,87 @@
 ;;;
 
 (defn delimited-byte-codec
-  [delimiters strip-delimiters?]
-  (let [sizeof-delimiter (.remaining ^ByteBuffer (first delimiters))]
-    (reify
-      Reader
-      (read-bytes [this b]
-	(let [[x xs] (take-delimited-bytes bytes delimiters strip-delimiters?)]
-	  (if x
-	    [(concat bytes x) xs]
-	    [(delimited-byte-codec xs delimiters strip-delimiters?)
-	     nil])))
-      BoundedWriter
-      (sizeof [_ buf-seq]
-	(+ (buf-seq-count buf-seq) sizeof-delimiter))
-      (write-to-buf [this buf buf-seq]
-	(write-buf-seq (concat buf-seq (take 1 delimiters)) buf)))))
+  ([delimiters strip-delimiters]
+     (delimited-byte-codec nil delimiters strip-delimiters))
+  ([processed-bufs delimiters strip-delimiters?]
+     (let [delimiters (map to-byte-buffer delimiters)
+	   sizeof-delimiter (.remaining ^ByteBuffer (first delimiters))
+	   max-trailing-delimiter (dec (apply max (map #(.remaining ^ByteBuffer %) delimiters)))
+	   prefix (when-let [b (take-contiguous-bytes max-trailing-delimiter processed-bufs)]
+		    [b])]
+       (reify
+	 Reader
+	 (read-bytes [this b]
+	   (let [[x xs] (take-delimited-bytes (concat prefix b) delimiters strip-delimiters?)]
+	     (if x
+	       [x xs]
+	       [(delimited-byte-codec b delimiters strip-delimiters?)
+		nil])))
+	 BoundedWriter
+	 (sizeof [_ buf-seq]
+	   (+
+	     (buf-seq-count buf-seq)
+	     (if strip-delimiters? sizeof-delimiter 0)))
+	 (write-to-buf [this buf buf-seq]
+	   (if strip-delimiters?
+	     (write-buf-seq (concat buf-seq (take 1 delimiters)) buf)
+	     (write-buf-seq buf-seq buf)))))))
 
-(defn wrap-delimited-codec
-  [codec delimiters strip-delimiters?]
-  (let [delimited-codec (compose-readers
-			  (delimited-byte-codec delimiters strip-delimiters?)
-			  (take-all codec))]
-    (reify
-      Reader
-      (read-bytes [_ b]
-	(read-bytes delimited-codec b))
-      BoundedWriter
-      (sizeof [_ buf-seq]
-	(sizeof delimited-codec buf-seq))
-      (write-to-buf [_ buf val]
-	(write-to-buf delimited-codec buf val)))))
+(defn delimited-block
+  [codec delimiters]
+  (let [delimiters (map to-byte-buffer delimiters)
+	sizeof-delimiter (.remaining ^ByteBuffer (first delimiters))
+	delimited-codec (compose-readers (delimited-byte-codec delimiters true)
+			  (fn [bytes remainder]
+			    (let [[v remainder*] (read-bytes codec bytes)]
+			      (when-not (empty? remainder*)
+				(throw (Exception. "All bytes inside delimited block must be consumed")))
+			      [v remainder])))]
+    (if (bounded-writer? codec)
+      (reify
+	Reader
+	(read-bytes [_ buf-seq]
+	  (read-bytes delimited-codec buf-seq))
+	BoundedWriter
+	(sizeof [_ val]
+	  (+ (sizeof codec val) sizeof-delimiter))
+	(write-to-buf [_ buf val]
+	  (write-to-buf codec buf val)
+	  (.put ^ByteBuffer buf ^ByteBuffer (first delimiters))))
+      (reify
+	Reader
+	(read-bytes [_ buf-seq]
+	  (read-bytes delimited-codec buf-seq))
+	UnboundedWriter
+	(create-buf [_ val]
+	  (write-bytes delimited-codec
+	    (write-bytes codec val)))))))
+
+(defn wrap-delimited-sequence
+  [codec delimiters]
+  (let [delimiters (map to-byte-buffer delimiters)
+	sizeof-delimiter (.remaining ^ByteBuffer (first delimiters))
+	delimited-codec (compose-readers (delimited-byte-codec delimiters true) (take-all codec))]
+    (if (bounded-writer? codec)
+      (reify
+	Reader
+	(read-bytes [_ buf-seq]
+	  (read-bytes delimited-codec buf-seq))
+	BoundedWriter
+	(sizeof [_ vals]
+	  (+ (apply + (map #(sizeof codec %) vals)) sizeof-delimiter))
+	(write-to-buf [_ buf vals]
+	  (doseq [v vals]
+	    (write-to-buf codec buf v))
+	  (.put ^ByteBuffer buf ^ByteBuffer (first delimiters))))
+      (reify
+	Reader
+	(read-bytes [_ buf-seq]
+	  (read-bytes delimited-codec buf-seq))
+	UnboundedWriter
+	(create-buf [_ vals]
+	  (write-bytes delimited-codec
+	    (apply concat
+	      (map #(write-bytes codec %) vals))))))))
 
  

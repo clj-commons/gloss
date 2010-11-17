@@ -96,3 +96,47 @@
 	  (concat
 	    (write-bytes sig (body->header val))
 	    (write-bytes (header->body header) val)))))))
+
+;;;
+
+(defn- repeated-reader [codec len vals]
+  (reify
+    Reader
+    (read-bytes [_ buf-seq]
+      (loop [buf-seq buf-seq, vals vals]
+	(if (= (count vals) len)
+	  [vals buf-seq]
+	  (let [[v b] (read-bytes codec buf-seq)]
+	    (if (reader? v)
+	      [(repeated-reader codec len vals) b]
+	      (recur b (conj vals v)))))))))
+
+(defn wrap-prefix-repeated
+  [prefix-codec codec]
+  (assert (bounded-writer? prefix-codec))
+  (let [codec* (compose-readers
+		 prefix-codec
+		 (fn [len b]
+		   (read-bytes (repeated-reader codec len []) b)))
+	sizeof-prefix (sizeof prefix-codec 0)]
+    (if (bounded-writer? codec)
+     (reify
+       Reader
+       (read-bytes [_ buf-seq]
+	 (read-bytes codec* buf-seq))
+       BoundedWriter
+       (sizeof [_ vals]
+	 (+ sizeof-prefix (apply + (map #(sizeof codec %) vals))))
+       (write-to-buf [_ buf vals]
+	 (write-to-buf prefix-codec buf (count vals))
+	 (doseq [v vals]
+	   (write-to-buf codec buf v))))
+     (reify
+       Reader
+       (read-bytes [_ buf-seq]
+	 (read-bytes codec* buf-seq))
+       UnboundedWriter
+       (create-buf [_ vals]
+	 (concat
+	   (write-bytes prefix-codec (count vals))
+	   (apply concat (map #(write-bytes codec %) vals))))))))
