@@ -59,11 +59,6 @@
       clojure.lang.Counted
       (count [_] length))))
 
-(defn to-char-buffer [x]
-  (if (instance? CharBuffer x)
-    x
-    (CharBuffer/wrap x)))
-
 ;;;
 
 (defn- take-finite-string-from-buf-seq [^CharsetDecoder decoder ^CharBuffer char-buf buf-seq]

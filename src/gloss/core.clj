@@ -29,12 +29,6 @@
 (defn delimited-block [delimiters frame]
   (bytes/delimited-block delimiters false (compile-frame frame)))
 
-(defn prefix
-  ([primitive]
-     (prefix primitive identity identity))
-  ([signature to-integer from-integer]
-     (pr/prefix (compile-frame signature) to-integer from-integer)))
-
 (defn string
   [charset & {:as options}]
   (let [charset (name charset)]
@@ -58,6 +52,12 @@
 
 ;;;
 
+(defn prefix
+  ([primitive]
+     (prefix primitive identity identity))
+  ([signature to-integer from-integer]
+     (pr/prefix (compile-frame signature) to-integer from-integer)))
+
 (defn repeated [frame & {:as options}]
   (let [codec (compile-frame frame)]
     (cond
@@ -68,5 +68,5 @@
       
       :else
       (pr/wrap-prefixed-sequence
-	(or (:prefix options) (prim/primitive-codecs :int32))
+	(or (:prefix options) (:int32 prim/primitive-codecs))
 	codec))))

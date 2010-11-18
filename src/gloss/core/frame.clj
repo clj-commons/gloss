@@ -52,7 +52,7 @@
 	      (write-bytes x buf v)))
 	  (apply concat
 	    (map
-	      (fn [[_ x] v] (write-bytes x buf v))
+	      (fn [[[_ x] v]] (write-bytes x buf v))
 	      (filter ffirst (map list s vs)))))))))
 
 (defn convert-map

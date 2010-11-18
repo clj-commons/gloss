@@ -8,7 +8,10 @@
 
 (ns gloss.core.formats
   (:import
-    [java.nio Buffer ByteBuffer]))
+    [java.nio
+     Buffer
+     ByteBuffer
+     CharBuffer]))
 
 (def byte-array-class (class (byte-array [])))
 
@@ -29,3 +32,8 @@
     (sequential? x) (to-byte-buffer (byte-array (map #(byte (int %)) x)))
     (number? x) (to-byte-buffer (byte-array [(byte x)]))
     :else (throw (Exception. (str "Cannot convert to ByteBuffer: " x)))))
+
+(defn to-char-buffer [x]
+  (if (instance? CharBuffer x)
+    x
+    (CharBuffer/wrap ^CharSequence x)))

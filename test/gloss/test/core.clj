@@ -9,10 +9,15 @@
 (ns gloss.test.core
   (:use
     [gloss.core]
-    [clojure test]))
+    [gloss.core.formats :only (to-char-buffer)]
+    [gloss.data.bytes :only (dup-buf-seq)]
+    [clojure test walk]))
+
+(defn convert-char-sequences [x]
+  (postwalk #(if (instance? CharSequence %) (str %) %) x))
 
 (defn compare-result [expected result]
-  (is (= expected (second result)))
+  (is (= expected (convert-char-sequences (second result))))
   (is (= true (first result)))
   (is (empty? (nth result 2))))
 
@@ -20,12 +25,11 @@
   (let [f (compile-frame f)
 	bytes (write-bytes f nil val)
 	result (read-bytes f bytes)]
-   (compare-result val result)))
+    (compare-result val result)))
 
-(defn test-transformed-roundtrip [f transform val]
-  (let [f (compile-frame f)
-	result (read-bytes f (write-bytes f nil val))]
-    (compare-result val [(first result) (transform (second result)) (nth result 2)])))
+(defn test-full-roundtrip [f buf val]
+  (compare-result val (read-bytes f (dup-buf-seq buf)))
+  (is (= buf (write-bytes f nil val))))
 
 (deftest test-lists
   (test-roundtrip
@@ -75,14 +79,27 @@
 	    (fn [x] [\$ x]))
 	codec (repeated :byte :prefix p)
 	buf (to-byte-buffer [\$ 3 1 2 3])]
-    (compare-result [1 2 3] (read-bytes codec [buf]))))
+    (test-full-roundtrip codec [buf] [1 2 3])))
+
+(deftest test-simple-header
+  (let [b->h (fn [body]
+	       (get
+		 {:a 1 :b 2 :c 3}
+		 (first body)))
+	h->b (fn [hd]
+	       (condp = hd
+		 1 (compile-frame [:a :int16])
+		 2 (compile-frame [:b :float32])
+		 3 (compile-frame [:c (string :utf-8 :delimiters [\0])])))
+	codec (header :byte h->b b->h)]
+    (test-roundtrip codec [:a 1])
+    (test-roundtrip codec [:b 2.5])
+    (test-roundtrip codec [:c "abc"])))
 
 (deftest test-string
-  (test-transformed-roundtrip
+  (test-roundtrip
     (string :utf-8)
-    str
     "abcd")
-  (test-transformed-roundtrip
+  (test-roundtrip
     (repeated (string :utf-8 :delimiters ["\0"]))
-    #(map str %)
     ["abc" "def"]))
