@@ -96,6 +96,14 @@
     (test-roundtrip codec [:b 2.5])
     (test-roundtrip codec [:c "abc"])))
 
+(deftest test-enum
+  (test-roundtrip
+    (enum :a :b :c)
+    :a)
+  (test-roundtrip
+    (enum {:a 100 :b 1000})
+    :b))
+
 (deftest test-string
   (test-roundtrip
     (string :utf-8)

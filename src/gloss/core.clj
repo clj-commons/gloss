@@ -25,6 +25,7 @@
 (import-fn #'formats/to-byte-buffer)
 (import-fn #'pr/read-bytes)
 (import-fn #'pr/write-bytes)
+(import-fn #'pr/sizeof)
 
 (defn delimited-block [delimiters frame]
   (bytes/delimited-block delimiters false (compile-frame frame)))
@@ -51,6 +52,30 @@
     body->header))
 
 ;;;
+
+(defn enum [& map-or-seq]
+  (let [n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
+	       (let [m (first map-or-seq)]
+		 (zipmap
+		   (map short (vals m))
+		   (keys m)))
+	       (zipmap
+		 (map short (range (count map-or-seq)))
+		 map-or-seq))
+	v->n (zipmap (vals n->v) (keys n->v))
+	codec (:int16 prim/primitive-codecs)]
+    (reify
+      pr/Reader
+      (read-bytes [_ b]
+	(let [[success x b] (read-bytes codec b)]
+	  (if success
+	    [true (n->v (short x)) b]
+	    [false x b])))
+      pr/Writer
+      (sizeof [_]
+	(sizeof codec))
+      (write-bytes [_ buf v]
+	(write-bytes codec buf (v->n v))))))
 
 (defn prefix
   ([primitive]
