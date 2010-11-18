@@ -21,26 +21,23 @@
 (defmacro primitive-codec [accessor writer size typecast transform-fn]
   `(reify
      Reader
-     (read-bytes [this# buf-seq#]
-       (cond
+     (read-bytes [_ b#]
+       (let [remaining# (.remaining ^Buffer (first b#))]
+	 (cond
+	   (= ~size remaining#)
+	   [true (~accessor ^ByteBuffer (first b#)) (rest b#)]
 
-	 (has-bytes ~size buf-seq#)
-	 [(~accessor ^ByteBuffer (first buf-seq#)) buf-seq#]
+	   (< ~size remaining#)
+	   [true (~accessor ^ByteBuffer (first b#)) b#]
 
-	 (< (buf-seq-count buf-seq#) ~size)
-	 [this# buf-seq#]
-
-	 :else
-	 [(~accessor ^ByteBuffer (take-contiguous-bytes ~size buf-seq#))
-	  (drop-bytes ~size buf-seq#)]))
-     BoundedWriter
-     (sizeof [_ _]
+	   :else
+	   [true (~accessor ^ByteBuffer (take-contiguous-bytes ~size b#)) (drop-bytes ~size b#)])))
+     Writer
+     (sizeof [_]
        ~size)
-     (write-to-buf [_ buf# val#]
-       (~writer ^ByteBuffer buf# (~typecast (~transform-fn val#))))
-
-     (toString [_]
-       ~(str typecast))))
+     (write-bytes [_ buf# v#]
+       (with-buffer [buf# ~size]
+	 (~writer ^ByteBuffer buf# (~typecast (~transform-fn v#)))))))
 
 (def primitive-codecs
   {:byte (primitive-codec .get .put 1 byte identity) 

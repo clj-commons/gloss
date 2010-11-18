@@ -17,6 +17,7 @@
      CharBuffer]
     [java.nio.charset
      CharsetDecoder
+     CharsetEncoder
      Charset
      CoderResult]))
 
@@ -32,12 +33,12 @@
 	(cond
 	  (nil? buf) (throw (IndexOutOfBoundsException. (str idx "is greater than length of " length)))
 	  (> idx (.remaining buf)) (recur (- idx (.remaining buf)) (rest chars))
-	  :else (.get buf idx))))))
+	  :else (.get buf (int idx)))))))
 
 (defn- sub-sequence [buf-seq length start end]
   (if (or (neg? start) (<= length end))
     (throw (IndexOutOfBoundsException. (str "[" start ", " end ") is not a valid interval.")))
-    (-> buf-seq (drop-from-bufs start) (take-from-bufs (- end start)))))
+    (-> buf-seq (drop-from-char-bufs start) (take-from-char-bufs (- end start)))))
 
 (defn- create-decoder [charset]
   (.newDecoder (Charset/forName charset)))
@@ -72,7 +73,7 @@
       (loop [bytes buf-seq]
 	(if (empty? bytes)
 	  [char-buf nil]
-	  (let [first-buf (first bytes)
+	  (let [first-buf ^ByteBuffer (first bytes)
 		result (.decode decoder first-buf char-buf false)]
 	    (cond
 	      
@@ -96,15 +97,17 @@
     (read-bytes [this buf-seq]
       (let [decoder (or decoder (create-decoder charset))
 	    char-buf (or char-buf (CharBuffer/allocate len))
-	    [chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
+	    [^CharBuffer chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
 	(if-not (.hasRemaining chars)
-	  [(.rewind ^CharBuffer chars) bytes]
-	  [(finite-string-codec- charset len decoder char-buf) buf-seq])))
-    UnboundedWriter
-    (create-buf [this strs]
+	  [true (.rewind chars) bytes]
+	  [false (finite-string-codec- charset len decoder char-buf) buf-seq])))
+    Writer
+    (sizeof [_]
+      nil)
+    (write-bytes [_ _ strs]
       (let [encoder (create-encoder charset)]
 	(apply concat
-	  (map #(.encode encoder (to-char-buffer %)) strs))))))
+	  (map #(.encode ^CharsetEncoder encoder (to-char-buffer %)) strs))))))
 
 (defn finite-string-codec
   [charset len]
@@ -117,8 +120,8 @@
 	char-buf (create-char-buf decoder buf-seq)]
     (loop [chars [char-buf], bytes buf-seq]
       (if (empty? bytes)
-	[(rewind-buf-seq chars) nil]
-	(let [first-buf (first bytes)
+	[(rewind-char-buf-seq chars) nil]
+	(let [first-buf ^ByteBuffer (first bytes)
 	      result (-> decoder (.decode first-buf (last chars) false))]
 	  (cond
 
@@ -127,7 +130,7 @@
 
 	    (and (.isUnderflow result) (pos? (.remaining first-buf)))
 	    (if (= 1 (count bytes))
-	      [(rewind-buf-seq chars) bytes]
+	      [(rewind-char-buf-seq chars) bytes]
 	      (recur chars
 		(cons
 		  (take-contiguous-bytes (inc (buf-seq-count (take 1 bytes))) bytes)
@@ -143,8 +146,10 @@
       (let [decoder (create-decoder charset)
 	    [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
 	(if (zero? (buf-seq-count chars))
-	  [this buf-seq]
-	  [(create-char-buf-seq chars) bytes])))
-    UnboundedWriter
-    (create-buf [this s]
-      [(.encode (create-encoder charset) (to-char-buffer s))])))
+	  [false this buf-seq]
+	  [true (create-char-buf-seq chars) bytes])))
+    Writer
+    (sizeof [_]
+      nil)
+    (write-bytes [_ _ s]
+      [(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))])))

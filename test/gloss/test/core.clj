@@ -12,12 +12,14 @@
     [clojure test]))
 
 (defn test-roundtrip [f val]
-  (let [f (compile-frame f)]
-    (is (= val (first (read-bytes f (write-bytes f val)))))))
+  (let [f (compile-frame f)
+	bytes (write-bytes f nil val)
+	result (read-bytes f bytes)]
+    (is (= val (second result)))))
 
 (defn test-transformed-roundtrip [f transform val]
   (let [f (compile-frame f)]
-    (is (= val (transform (first (read-bytes f (write-bytes f val))))))))
+    (is (= val (transform (second (read-bytes f (write-bytes f nil val))))))))
 
 (deftest test-lists
   (test-roundtrip

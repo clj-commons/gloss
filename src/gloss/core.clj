@@ -25,10 +25,6 @@
 (import-fn #'pr/read-bytes)
 (import-fn #'pr/write-bytes)
 
-(defn sizeof [frame value]
-  (when (pr/bounded-writer? frame)
-    (pr/sizeof frame value)))
-
 (defn delimited-block [delimiters frame]
   (bytes/delimited-block delimiters false (compile-frame frame)))
 
@@ -64,6 +60,6 @@
 	(map to-byte-buffer (:delimiters options)))
       
       :else
-      (pr/wrap-prefix-repeated
+      (pr/wrap-prefixed-sequence
 	((or (:prefix options) :int32) prim/primitive-codecs)
 	codec))))

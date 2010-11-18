@@ -15,45 +15,28 @@
 (defprotocol Reader
   (read-bytes [this buf-seq]))
 
-(defprotocol UnboundedWriter
-  (create-buf [this val]))
-
-(defprotocol BoundedWriter
-  (sizeof [this val])
-  (write-to-buf [this buf val]))
+(defprotocol Writer
+  (sizeof [this])
+  (write-bytes [this buf val]))
 
 (defn reader? [x]
   (satisfies? Reader x))
 
-(defn bounded-writer? [x]
-  (satisfies? BoundedWriter x))
+;;;
 
-(defn unbounded-writer? [x]
-  (satisfies? UnboundedWriter x))
-
-(defn writer? [x]
-  (or (bounded-writer? x) (unbounded-writer? x)))
+(defmacro with-buffer [[buf size] & body]
+  `(if ~buf
+     (do ~@body)
+     (let [~buf (ByteBuffer/allocate ~size)]
+       (do ~@body)
+       [(.rewind ^Buffer ~buf)])))
 
 ;;;
 
-(def *current-buffer* nil)
-
-(defn write-bytes [codec val]
-  (cond
-    (bounded-writer? codec)
-    (if *current-buffer*
-      (write-to-buf codec *current-buffer* val)
-      (let [buf (ByteBuffer/allocate (sizeof codec val))]
-	(write-to-buf codec buf val)
-	[(.rewind ^ByteBuffer buf)]))
-
-    (unbounded-writer? codec)
-    (create-buf codec val)))
-
 (defn frame-seq [reader buf-seq]
   (loop [result [], buf-seq buf-seq]
-    (let [[x xs] (read-bytes reader buf-seq)]
-      (if-not (reader? x)
+    (let [[success x xs] (read-bytes reader buf-seq)]
+      (if success
 	(recur (conj result x) xs)
 	result))))
 
@@ -61,18 +44,18 @@
   (reify
     Reader
     (read-bytes [this buf-seq]
-      (let [[x bytes :as result] (read-bytes codec buf-seq)]
-	(if (reader? x)
-	  [this bytes]
-	  (apply callback result))))
-    UnboundedWriter
-    (create-buf [_ val]
-      (write-bytes codec val))))
+      (let [[success x bytes] (read-bytes codec buf-seq)]
+	(if success
+	  (callback x bytes)
+	  [this bytes])))
+    Writer
+    (sizeof [_] (sizeof codec))
+    (write-bytes [_ buf val] (write-bytes codec buf val))))
 
 (defn compose-readers [codec & readers]
   (let [readers (map
 		  (fn [rd]
-		    (if (satisfies? Reader rd)
+		    (if (reader? rd)
 		      #(apply read-bytes rd %)
 		      rd))
 		  readers)]
@@ -90,53 +73,56 @@
       Reader
       (read-bytes [_ buf-seq]
 	(read-bytes codec buf-seq))
-      UnboundedWriter
-      (create-buf [_ val]
+      Writer
+      (sizeof [_]
+	nil)
+      (write-bytes [_ buf val]
 	(let [header (body->header val)]
 	  (concat
-	    (write-bytes sig (body->header val))
-	    (write-bytes (header->body header) val)))))))
+	    (write-bytes sig buf (body->header val))
+	    (write-bytes (header->body header) buf val)))))))
 
 ;;;
 
-(defn- repeated-reader [codec len vals]
+(declare read-sequence)
+
+(defn- sequence-reader [codec len vals]
   (reify
     Reader
     (read-bytes [_ buf-seq]
-      (loop [buf-seq buf-seq, vals vals]
-	(if (= (count vals) len)
-	  [vals buf-seq]
-	  (let [[v b] (read-bytes codec buf-seq)]
-	    (if (reader? v)
-	      [(repeated-reader codec len vals) b]
-	      (recur b (conj vals v)))))))))
+      (read-sequence codec buf-seq len vals))))
 
-(defn wrap-prefix-repeated
+(defn read-sequence [codec buf-seq len vals]
+  (loop [buf-seq buf-seq, vals vals]
+    (if (= (count vals) len)
+      [true vals buf-seq]
+      (let [[success x b] (read-bytes codec buf-seq)]
+	(if success
+	  (recur b (conj vals x))
+	  [false (sequence-reader codec len vals) b])))))
+
+(defn wrap-prefixed-sequence
   [prefix-codec codec]
-  (assert (bounded-writer? prefix-codec))
+  (assert (sizeof prefix-codec))
   (let [codec* (compose-readers
 		 prefix-codec
 		 (fn [len b]
-		   (read-bytes (repeated-reader codec len []) b)))
-	sizeof-prefix (sizeof prefix-codec 0)]
-    (if (bounded-writer? codec)
-     (reify
-       Reader
-       (read-bytes [_ buf-seq]
-	 (read-bytes codec* buf-seq))
-       BoundedWriter
-       (sizeof [_ vals]
-	 (+ sizeof-prefix (apply + (map #(sizeof codec %) vals))))
-       (write-to-buf [_ buf vals]
-	 (write-to-buf prefix-codec buf (count vals))
-	 (doseq [v vals]
-	   (write-to-buf codec buf v))))
-     (reify
-       Reader
-       (read-bytes [_ buf-seq]
-	 (read-bytes codec* buf-seq))
-       UnboundedWriter
-       (create-buf [_ vals]
-	 (concat
-	   (write-bytes prefix-codec (count vals))
-	   (apply concat (map #(write-bytes codec %) vals))))))))
+		   (read-sequence codec b len [])))
+	sizeof-prefix (sizeof prefix-codec)]
+    (reify
+      Reader
+      (read-bytes [_ b]
+	(read-bytes codec* b))
+      Writer
+      (write-bytes [_ buf vs]
+	(let [cnt (count vs)]
+	  (if (sizeof codec)
+	    (with-buffer [buf (+ sizeof-prefix (* cnt (sizeof codec)))]
+	      (write-bytes prefix-codec buf cnt)
+	      (doseq [v vs]
+		(write-bytes codec buf v)))
+	    (concat
+	      (with-buffer [buf sizeof-prefix]
+		(write-bytes prefix-codec buf cnt))
+	      (apply concat
+		(map #(write-bytes codec buf %) vs)))))))))
