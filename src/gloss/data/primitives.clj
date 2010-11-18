@@ -18,6 +18,13 @@
 (defn has-bytes [n buf-seq]
   (< (.remaining ^Buffer (first buf-seq)) n))
 
+(defn to-byte [x]
+  (cond
+    (number? x) (byte x)
+    (char? x) (-> x int byte)
+    (string? x) (-> x first int byte)
+    :else (throw (Exception. (str "Cannot convert " x " to byte.")))))
+
 (defmacro primitive-codec [accessor writer size typecast transform-fn]
   `(reify
      Reader
@@ -40,7 +47,7 @@
 	 (~writer ^ByteBuffer buf# (~typecast (~transform-fn v#)))))))
 
 (def primitive-codecs
-  {:byte (primitive-codec .get .put 1 byte identity) 
+  {:byte (primitive-codec .get .put 1 byte to-byte) 
    :int16 (primitive-codec .getShort .putShort 2 short identity)
    :int32 (primitive-codec .getInt .putInt 4 int identity)
    :int64 (primitive-codec .getLong .putLong 8 long identity)

@@ -23,9 +23,9 @@
 (defn to-byte-buffer [x]
   (cond
     (instance? Character x) (to-byte-buffer (str x))
-    (string? x) (to-byte-buffer (.getBytes x "utf-8"))
+    (string? x) (to-byte-buffer (.getBytes ^String x "utf-8"))
     (= (class x) byte-array-class) (ByteBuffer/wrap x)
     (instance? ByteBuffer x) x
-    (sequential? x) (to-byte-buffer (byte-array (map byte x)))
+    (sequential? x) (to-byte-buffer (byte-array (map #(byte (int %)) x)))
     (number? x) (to-byte-buffer (byte-array [(byte x)]))
     :else (throw (Exception. (str "Cannot convert to ByteBuffer: " x)))))

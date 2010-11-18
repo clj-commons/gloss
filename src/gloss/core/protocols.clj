@@ -126,3 +126,18 @@
 		(write-bytes prefix-codec buf cnt))
 	      (apply concat
 		(map #(write-bytes codec buf %) vs)))))))))
+
+(defn prefix
+  [signature to-integer from-integer]
+  (let [codec (compose-readers
+		signature
+		(fn [x b] [true (to-integer x) b]))]
+    (reify
+      Reader
+      (read-bytes [_ b]
+	(read-bytes codec b))
+      Writer
+      (sizeof [_]
+	(sizeof signature))
+      (write-bytes [_ buf v]
+	(write-bytes codec buf (from-integer v))))))

@@ -81,9 +81,11 @@
     :else f))
 
 (defn compile-frame [f]
-  (->> f
-    (postwalk-replace primitive-codecs)
-    compile-frame-))
+  (if (reader? f)
+    f
+    (->> f
+     (postwalk-replace primitive-codecs)
+     compile-frame-)))
 
 
 

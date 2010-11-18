@@ -11,15 +11,21 @@
     [gloss.core]
     [clojure test]))
 
+(defn compare-result [expected result]
+  (is (= expected (second result)))
+  (is (= true (first result)))
+  (is (empty? (nth result 2))))
+
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
 	bytes (write-bytes f nil val)
 	result (read-bytes f bytes)]
-    (is (= val (second result)))))
+   (compare-result val result)))
 
 (defn test-transformed-roundtrip [f transform val]
-  (let [f (compile-frame f)]
-    (is (= val (transform (second (read-bytes f (write-bytes f nil val))))))))
+  (let [f (compile-frame f)
+	result (read-bytes f (write-bytes f nil val))]
+    (compare-result val [(first result) (transform (second result)) (nth result 2)])))
 
 (deftest test-lists
   (test-roundtrip
@@ -55,7 +61,21 @@
     (partition 2 (range 100)))
   (test-roundtrip
     (repeated :byte :delimiters [127])
+    (range 100))
+  (test-roundtrip
+    (repeated {:a :int32 :b :int32})
+    (repeat 100 {:a 1 :b 2}))
+  (test-roundtrip
+    (repeated :int32 :prefix (prefix :byte))
     (range 100)))
+
+(deftest test-complex-prefix
+  (let [p (prefix [:byte :byte]
+	    second
+	    (fn [x] [\$ x]))
+	codec (repeated :byte :prefix p)
+	buf (to-byte-buffer [\$ 3 1 2 3])]
+    (compare-result [1 2 3] (read-bytes codec [buf]))))
 
 (deftest test-string
   (test-transformed-roundtrip

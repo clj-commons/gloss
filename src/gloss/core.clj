@@ -22,11 +22,18 @@
 (import-fn #'frame/compile-frame)
 (import-fn #'formats/to-byte-buffer)
 (import-fn #'formats/to-buf-seq)
+(import-fn #'formats/to-byte-buffer)
 (import-fn #'pr/read-bytes)
 (import-fn #'pr/write-bytes)
 
 (defn delimited-block [delimiters frame]
   (bytes/delimited-block delimiters false (compile-frame frame)))
+
+(defn prefix
+  ([primitive]
+     (prefix primitive identity identity))
+  ([signature to-integer from-integer]
+     (pr/prefix (compile-frame signature) to-integer from-integer)))
 
 (defn string
   [charset & {:as options}]
@@ -61,5 +68,5 @@
       
       :else
       (pr/wrap-prefixed-sequence
-	((or (:prefix options) :int32) prim/primitive-codecs)
+	(or (:prefix options) (prim/primitive-codecs :int32))
 	codec))))

@@ -15,11 +15,6 @@
      ByteBuffer
      CharBuffer]))
 
-(defn byte-buffer [s]
-  (if (string? s)
-    (ByteBuffer/wrap (.getBytes ^String s "utf-8"))
-    (ByteBuffer/wrap (byte-array (map byte s)))))
-
 (defn buf-seq-count [buf-seq]
   (apply + (map #(.remaining ^Buffer %) buf-seq)))
 
