@@ -192,11 +192,11 @@
 ;;;
 
 (defn delimited-byte-codec
-  ([delimiters strip-delimiters]
+  ([delimiters strip-delimiters?]
      (delimited-byte-codec
        nil
        (map to-byte-buffer delimiters)
-       strip-delimiters))
+       strip-delimiters?))
   ([buf-seq delimiters strip-delimiters?]
      (let [max-trailing-delimiter (dec (apply max (map #(.remaining ^ByteBuffer %) delimiters)))
 	   prefix (when-let [b (take-contiguous-bytes max-trailing-delimiter buf-seq)]

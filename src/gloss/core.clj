@@ -82,7 +82,7 @@
       (finite-string-codec charset (:length options))
 
       (:delimiters options)
-      (delimited-block
+      (delimited-block-
 	(string-codec charset)
 	(map to-byte-buffer (:delimiters options)))
 
@@ -90,7 +90,7 @@
       (string-codec charset))))
 
 (defn header [frame header->body body->header]
-  (header-y
+  (header-
     (compile-frame frame)
     header->body
     body->header))

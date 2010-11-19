@@ -10,6 +10,7 @@
   (:use
     [gloss.core]
     [gloss.core.formats :only (to-char-buffer)]
+    [gloss.core.protocols :only (write-bytes read-bytes)]
     [gloss.data.bytes :only (dup-buf-seq)]
     [clojure test walk]))
 
