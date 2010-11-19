@@ -214,7 +214,7 @@
 	 (write-bytes [_ _ v]
 	   (concat v [(.duplicate ^ByteBuffer (first delimiters))]))))))
 
-(defn delimited-block
+(defn delimited-block-
   [codec delimiters]
   (let [inner-codec (delimited-byte-codec delimiters true)
 	delimited-codec (compose-readers

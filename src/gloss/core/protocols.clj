@@ -35,10 +35,12 @@
 
 (defn frame-seq [reader buf-seq]
   (loop [result [], buf-seq buf-seq]
-    (let [[success x xs] (read-bytes reader buf-seq)]
-      (if success
-	(recur (conj result x) xs)
-	result))))
+    (if (empty? buf-seq)
+      [result nil]
+      (let [[success x xs] (read-bytes reader buf-seq)]
+	(if success
+	  (recur (conj result x) xs)
+	  [result xs])))))
 
 (defn- read-callback [codec callback]
   (reify
@@ -63,7 +65,7 @@
 
 ;;;
 
-(defn header [sig header->body body->header]
+(defn header- [sig header->body body->header]
   (let [codec (compose-readers
 		sig
 		(fn [v b]
@@ -127,7 +129,7 @@
 	      (apply concat
 		(map #(write-bytes codec buf %) vs)))))))))
 
-(defn prefix
+(defn prefix-
   [signature to-integer from-integer]
   (let [codec (compose-readers
 		signature

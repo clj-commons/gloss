@@ -8,45 +8,89 @@
 
 (ns gloss.core
   (:use
-    potemkin)
+    potemkin
+    [gloss.core protocols]
+    [gloss.data bytes primitives string])
   (:require
-    [gloss.core.protocols :as pr]
     [gloss.core.formats :as formats]
-    [gloss.core.frame :as frame]
-    [gloss.data.string :as string]
-    [gloss.data.bytes :as bytes]
-    [gloss.data.primitives :as prim])
-  (:import
-    [java.nio ByteBuffer]))
+    [gloss.core.frame :as frame]))
+
+;;;
 
 (import-fn #'frame/compile-frame)
-(import-fn #'formats/to-byte-buffer)
-(import-fn #'formats/to-buf-seq)
-(import-fn #'formats/to-byte-buffer)
-(import-fn #'pr/read-bytes)
-(import-fn #'pr/write-bytes)
-(import-fn #'pr/sizeof)
 
-(defn delimited-block [delimiters frame]
-  (bytes/delimited-block delimiters false (compile-frame frame)))
+(defmacro def-frame [name frame]
+  `(def ~name (compile-frame ~frame)))
+
+;;;
+
+(import-fn #'formats/to-byte-buffer)
+
+(defn contiguous
+  "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
+  [buf-seq]
+  (take-contiguous-bytes (buf-seq-count buf-seq) buf-seq))
+
+(defn encode
+  "Turns a frame value into a sequence of ByteBuffers."
+  [frame val]
+  (write-bytes frame nil val))
+
+(defn encode-all
+  "Turns a sequence of frame values into a sequence of ByteBuffers."
+  [frame vals]
+  (apply concat
+    (map #(write-bytes frame nil %) vals)))
+
+(defn decode
+  "Turns bytes into a single frame value.  If there are too few or too many bytes
+   for the frame, an exception is thrown."
+  [frame bytes]
+  (let [buf-seq (dup-buf-seq (formats/to-buf-seq bytes))
+	[success val remainder] (read-bytes frame buf-seq)]
+    (when-not success
+      (throw (Exception. "Insufficient bytes to decode frame.")))
+    (when-not (empty? remainder)
+      (throw (Exception. "Bytes left over after decoding frame.")))
+    val))
+
+(defn decode-all
+  "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
+   of the sequence, an exception is thrown."
+  [frame bytes]
+  (let [buf-seq (dup-buf-seq (formats/to-buf-seq bytes))]
+    (loop [buf-seq buf-seq, vals []]
+      (if (empty? buf-seq)
+	vals
+	(let [[success val remainder] (read-bytes frame buf-seq)]
+	  (when-not success
+	    (throw (Exception. "Bytes left over after decoding sequence of frames.")))
+	  (recur remainder (conj vals val)))))))
+
+;;;
+
+
+(defn delimited-block
+  [delimiters frame]
+  (delimited-block- delimiters (compile-frame frame)))
 
 (defn string
   [charset & {:as options}]
   (let [charset (name charset)]
     (cond
       (:length options)
-      (string/finite-string-codec charset (:length options))
+      (finite-string-codec charset (:length options))
 
       (:delimiters options)
-      (bytes/delimited-block
-	(string/string-codec charset)
+      (delimited-block
+	(string-codec charset)
 	(map to-byte-buffer (:delimiters options)))
 
       :else
-      (string/string-codec charset))))
+      (string-codec charset))))
 
 (defn header [frame header->body body->header]
-  (pr/header
+  (header-y
     (compile-frame frame)
     header->body
     body->header))
@@ -63,15 +107,15 @@
 		 (map short (range (count map-or-seq)))
 		 map-or-seq))
 	v->n (zipmap (vals n->v) (keys n->v))
-	codec (:int16 prim/primitive-codecs)]
+	codec (:int16 primitive-codecs)]
     (reify
-      pr/Reader
+      Reader
       (read-bytes [_ b]
 	(let [[success x b] (read-bytes codec b)]
 	  (if success
 	    [true (n->v (short x)) b]
 	    [false x b])))
-      pr/Writer
+      Writer
       (sizeof [_]
 	(sizeof codec))
       (write-bytes [_ buf v]
@@ -81,17 +125,17 @@
   ([primitive]
      (prefix primitive identity identity))
   ([signature to-integer from-integer]
-     (pr/prefix (compile-frame signature) to-integer from-integer)))
+     (prefix- (compile-frame signature) to-integer from-integer)))
 
 (defn repeated [frame & {:as options}]
   (let [codec (compile-frame frame)]
     (cond
       (:delimiters options)
-      (bytes/wrap-delimited-sequence
+      (wrap-delimited-sequence
 	codec
 	(map to-byte-buffer (:delimiters options)))
       
       :else
-      (pr/wrap-prefixed-sequence
-	(or (:prefix options) (:int32 prim/primitive-codecs))
+      (wrap-prefixed-sequence
+	(or (:prefix options) (:int32 primitive-codecs))
 	codec))))
