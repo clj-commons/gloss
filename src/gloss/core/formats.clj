@@ -21,7 +21,7 @@
       (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x
       (= (class x) byte-array-class) [(ByteBuffer/wrap x)]
       (instance? ByteBuffer x) [x]
-      :else (throw (Exception. (str "Cannot convert to buf-seq: " x))))))
+      :else (throw (Exception. (str "Cannot convert to buf-seq: " (with-out-str (prn x))))))))
 
 (defn to-byte-buffer [x]
   (cond
