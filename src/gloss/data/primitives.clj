@@ -28,7 +28,7 @@
 (defmacro primitive-codec [accessor writer size typecast transform-fn]
   `(reify
      Reader
-     (read-bytes [_ b#]
+     (read-bytes [this# b#]
        (let [remaining# (.remaining ^Buffer (first b#))]
 	 (cond
 	   (= ~size remaining#)
@@ -38,7 +38,9 @@
 	   [true (~accessor ^ByteBuffer (first b#)) b#]
 
 	   :else
-	   [true (~accessor ^ByteBuffer (take-contiguous-bytes ~size b#)) (drop-bytes ~size b#)])))
+	   (if-let [buf# (take-contiguous-bytes ~size b#)]
+	     [true (~accessor ^ByteBuffer buf#) (drop-bytes ~size b#)]
+	     [false this# b#]))))
      Writer
      (sizeof [_]
        ~size)

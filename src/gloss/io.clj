@@ -17,18 +17,29 @@
       (map* #(write-bytes frame nil %) ch)
       ch)))
 
+(defn decode-stream [frame reader buf-seq]
+  (loop [buf-seq buf-seq, vals [], reader reader]
+    (if (empty? buf-seq)
+      [vals frame nil]
+      (let [[success x remainder] (read-bytes reader buf-seq)]
+	(if success
+	  (recur remainder (conj vals x) frame)
+	  [vals x remainder])))))
+
 (defn decoder-channel [frame]
   (let [src (channel)
 	dst (channel)]
-    (run-pipeline nil
-      (fn [remainder]
+    (run-pipeline {:reader frame :bytes nil}
+      (fn [state]
 	(run-pipeline dst
 	  read-channel
 	  (fn [bytes]
-	    (let [[s remainder] (frame-seq
-				  frame
-				  (concat remainder (to-buf-seq bytes)))]
-	      (apply enqueue src s)
-	      remainder))))
+	    (let [[s reader remainder] (decode-stream
+					 frame
+					 (:reader state)
+					 (concat (:bytes state) (to-buf-seq bytes)))]
+	      (when-not (empty? s)
+		(apply enqueue src s))
+	      {:reader reader :bytes remainder}))))
       restart)
     (splice src dst)))

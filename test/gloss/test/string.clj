@@ -12,7 +12,7 @@
     [gloss.core protocols formats]
     [clojure test]))
 
-(defn split-str [interval bytes]
+(defn split-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
     (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buf-seq-count buf-seq))))))
 
@@ -20,24 +20,23 @@
 (def pilchards (.getBytes pilchards-string "utf-8"))
 
 (defn segments [interval]
-  (split-str interval pilchards))
+  (split-bytes interval pilchards))
 
 (deftest test-string-consumers
   (doseq [i (range 1 61)]
     (when (zero? (rem 60 i))
-      (let [segments (split-str i pilchards)
+      (let [segments (split-bytes i pilchards)
 	    consumer (string-codec "utf-8")]
-	(is (= pilchards-string (apply str (first (frame-seq consumer segments)))))))))
+	(is (= pilchards-string (apply str (frame-seq consumer segments))))))))
 
 (deftest test-finite-string-consumer
   (let [divisors (filter #(zero? (rem 30 %)) (range 1 61))
 	pilchar (first "¶")]
     (doseq [buf-interval divisors]
       (doseq [string-interval divisors]
-	(let [strs (first
-		     (frame-seq
-		       (finite-string-codec "utf-8" string-interval)
-		       (split-str buf-interval pilchards)))]
+	(let [strs (frame-seq
+		     (finite-string-codec "utf-8" string-interval)
+		     (split-bytes buf-interval pilchards))]
 	  (is (every? #(= string-interval (count %)) strs))
 	  (is (= 30 (count (apply str strs)))))))))
 

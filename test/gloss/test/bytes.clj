@@ -36,7 +36,7 @@
 
 (defn- test-split [split-location skip-bytes source split]
   (let [s (mapcat byte-seq source)
-	split (map #(mapcat byte-seq %) split)]
+	split (map #(mapcat byte-seq %) (rest split))]
     (if (<= split-location (count s))
       (is (= [(take split-location s) (drop (+ split-location skip-bytes) s)] split))
       (is (= [() s] split)))))

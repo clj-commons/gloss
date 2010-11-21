@@ -8,25 +8,45 @@
 
 (ns gloss.test.core
   (:use
-    [gloss.core]
-    [gloss.core.formats :only (to-char-buffer)]
+    [gloss core io]
+    [gloss.core.formats :only (to-char-buffer to-buf-seq)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
-    [gloss.data.bytes :only (dup-buf-seq)]
+    [gloss.data.bytes :only (take-bytes drop-bytes dup-buf-seq buf-seq-count take-contiguous-bytes)]
+    [lamina core]
     [clojure test walk]))
 
 (defn convert-char-sequences [x]
   (postwalk #(if (instance? CharSequence %) (str %) %) x))
+
+(defn split-bytes [interval bytes]
+  (let [buf-seq (to-buf-seq bytes)]
+    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buf-seq-count buf-seq))))))
 
 (defn compare-result [expected result]
   (is (= expected (convert-char-sequences (second result))))
   (is (= true (first result)))
   (is (empty? (nth result 2))))
 
+(defn test-stream-roundtrip [frame vals]
+  (let [bytes (split-bytes 1 (encode frame vals))
+	ch (decoder-channel frame)]
+    (doseq [b bytes]
+      (enqueue ch b))
+    (let [s (convert-char-sequences (channel-seq ch))]
+      (if (= 1 (count s))
+	(is (= vals (first s)))
+	(is (= vals (apply str s)))))))
+
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
 	bytes (write-bytes f nil val)
-	result (read-bytes f bytes)]
-    (compare-result val result)))
+	;;result (read-bytes f (dup-buf-seq bytes))
+	;;split-result (read-bytes f (split-bytes 1 (dup-buf-seq bytes)))
+	]
+    (test-stream-roundtrip f val)
+    ;;(compare-result val result)
+    ;;(compare-result val split-result)
+    ))
 
 (defn test-full-roundtrip [f buf val]
   (compare-result val (read-bytes f (dup-buf-seq buf)))
@@ -60,13 +80,13 @@
 (deftest test-repeated
   (test-roundtrip
     (repeated :int32)
-    (range 1000))
+    (range 100))
   (test-roundtrip
     (repeated [:byte :byte])
     (partition 2 (range 100)))
   (test-roundtrip
-    (repeated :byte :delimiters [127])
-    (range 100))
+    (repeated :byte :delimiters [64])
+    (range 10))
   (test-roundtrip
     (repeated {:a :int32 :b :int32})
     (repeat 100 {:a 1 :b 2}))
@@ -111,4 +131,7 @@
     "abcd")
   (test-roundtrip
     (repeated (string :utf-8 :delimiters ["\0"]))
-    ["abc" "def"]))
+    ["abc" "def"])
+  (test-roundtrip
+    [:a (string :utf-8 :delimiters ["\0"])]
+    [:a "abc"]))

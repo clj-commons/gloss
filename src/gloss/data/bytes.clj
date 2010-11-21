@@ -36,29 +36,33 @@
 
 (defn drop-from-bufs
   [n buf-seq]
-  (loop [remaining n, s buf-seq]
-    (when-not (empty? s)
-      (let [buf ^ByteBuffer (first s)]
-	(if (< remaining (.remaining buf))
-	  (cons
-	    (-> buf .duplicate ^ByteBuffer (.position (+ remaining (.position buf))) .slice)
-	    (rest s))
-	  (recur (- remaining (.remaining buf)) (rest s)))))))
+  (if (>= n (buf-seq-count buf-seq))
+    nil
+    (loop [remaining n, s buf-seq]
+      (when-not (empty? s)
+	(let [buf ^ByteBuffer (first s)]
+	  (if (< remaining (.remaining buf))
+	    (cons
+	      (-> buf .duplicate ^ByteBuffer (.position (+ remaining (.position buf))) .slice)
+	      (rest s))
+	    (recur (- remaining (.remaining buf)) (rest s))))))))
 
 (defn take-from-bufs
   [n buf-seq]
-  (let [first-buf ^ByteBuffer (first buf-seq)]
-    (when first-buf
-      (if (> (.remaining first-buf) n)
-	[(-> first-buf .duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) .slice)]
-	(when (<= n (buf-seq-count buf-seq))
-	  (loop [remaining n, s buf-seq, accumulator []]
-	    (if (pos? remaining)
-	      (let [buf ^ByteBuffer (first s)]
-		(if (>= remaining (.remaining buf))
-		  (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
-		  (conj accumulator (-> buf .duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) .slice))))
-	      accumulator)))))))
+  (if (zero? n)
+    nil
+    (let [first-buf ^ByteBuffer (first buf-seq)]
+      (when first-buf
+	(if (> (.remaining first-buf) n)
+	  [(-> first-buf .duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) .slice)]
+	  (when (<= n (buf-seq-count buf-seq))
+	    (loop [remaining n, s buf-seq, accumulator []]
+	      (if (pos? remaining)
+		(let [buf ^ByteBuffer (first s)]
+		  (if (>= remaining (.remaining buf))
+		    (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
+		    (conj accumulator (-> buf .duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) .slice))))
+		accumulator))))))))
 
 ;;; TODO: macro these away
 
@@ -71,14 +75,16 @@
 
 (defn drop-from-char-bufs
   [n buf-seq]
-  (loop [remaining n, s buf-seq]
-    (when-not (empty? s)
-      (let [buf ^CharBuffer (first s)]
-	(if (< remaining (.remaining buf))
-	  (cons
-	    (-> buf .duplicate ^CharBuffer (.position (+ remaining (.position buf))) .slice)
-	    (rest s))
-	  (recur (- remaining (.remaining buf)) (rest s)))))))
+  (if (>= n (buf-seq-count buf-seq))
+    nil
+    (loop [remaining n, s buf-seq]
+      (when-not (empty? s)
+	(let [buf ^CharBuffer (first s)]
+	  (if (< remaining (.remaining buf))
+	    (cons
+	      (-> buf .duplicate ^CharBuffer (.position (+ remaining (.position buf))) .slice)
+	      (rest s))
+	    (recur (- remaining (.remaining buf)) (rest s))))))))
 
 (defn take-from-char-bufs
   [n buf-seq]
@@ -105,9 +111,9 @@
 
 (defn take-contiguous-bytes
   "Returns a single ByteBuffer which contains the first 'n' bytes of the buffer-sequence."
-  [n bytes]
-  (when-not (empty? bytes)
-    (let [buf-seq (to-buf-seq bytes)
+  [n buf-seq]
+  (when-not (or (empty? buf-seq) (< (buf-seq-count buf-seq) n))
+    (let [buf-seq (dup-buf-seq buf-seq)
 	  first-buf ^ByteBuffer (first buf-seq)]
       (if (> (.remaining first-buf) n)
 	(-> first-buf .duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) .slice)
@@ -127,6 +133,30 @@
   (let [buf-seq (to-buf-seq bytes)]
     (take-from-bufs n buf-seq)))
 
+;;;
+
+(defn- first-byte [s]
+  (let [buf ^ByteBuffer (first s)]
+    (.get buf (.position buf))))
+
+(defn- advance-buf-seq [s]
+  (let [buf ^ByteBuffer (first s)
+	buf (.position buf (inc (.position buf)))]
+    (if (.hasRemaining buf)
+      s
+      (rest s))))
+
+(defn- match-delimiters [delimiters bytes]
+  (some
+    (fn [^ByteBuffer delimiter]
+      (and
+	(= (.get delimiter 0) (first-byte bytes))
+	(or
+	  (= 1 (.remaining delimiter))
+	  (= delimiter (take-contiguous-bytes (.remaining delimiter) bytes)))
+	delimiter))
+    (dup-buf-seq delimiters)))
+
 ;;naive solution - this assumes small and dissimilar delimiters
 (defn take-delimited-bytes
   "Returns the buffer-sequence as two buffer-sequences, split around the first found
@@ -135,33 +165,20 @@
      (take-delimited-bytes delimiters bytes true))
   ([bytes delimiters strip-delimiters?]
      (let [buf-seq (to-buf-seq bytes)
-	   delimiters (reverse (sort-by #(.remaining ^ByteBuffer %) delimiters))
-	   first-byte (fn this [s]
-			(let [buf ^ByteBuffer (first s)]
-			  (.get buf (.position buf))))
-	   advance (fn this [s]
-		     (let [buf ^ByteBuffer (first s)]
-		       (.slice ^ByteBuffer (.position buf (inc (.position buf))))
-		       (if (.hasRemaining buf)
-			 s
-			 (rest s))))]
+	   delimiters (->> delimiters
+			dup-buf-seq
+			(sort #(compare (.remaining ^ByteBuffer %1) (.remaining ^ByteBuffer %2)))
+			reverse)]
        (loop [s (dup-buf-seq buf-seq)]
 	 (if (empty? s)
-	   [nil buf-seq]
-	   (if-let [delimiter (some
-				(fn [^ByteBuffer delimiter]
-				  (and
-				    (= (.get delimiter 0) (first-byte s))
-				    (or
-				      (= 1 (.remaining delimiter))
-				      (= delimiter (take-contiguous-bytes (.remaining delimiter) s)))
-				    delimiter))
-				(dup-buf-seq delimiters))]
+	   [false nil buf-seq]
+	   (if-let [delimiter (match-delimiters delimiters s)]
 	     (let [location (- (buf-seq-count buf-seq) (buf-seq-count s))
 		   delimiter-count (-> ^ByteBuffer delimiter .rewind .remaining)]
-	       [(take-bytes (+ location (if strip-delimiters? 0 delimiter-count)) buf-seq)
+	       [true
+		(take-bytes (+ location (if strip-delimiters? 0 delimiter-count)) buf-seq)
 		(drop-bytes (+ location delimiter-count) buf-seq)])
-	     (recur (advance s))))))))
+	     (recur (advance-buf-seq s))))))))
 
 ;;;
 
@@ -197,26 +214,34 @@
        nil
        (map to-byte-buffer delimiters)
        strip-delimiters?))
-  ([buf-seq delimiters strip-delimiters?]
-     (let [max-trailing-delimiter (dec (apply max (map #(.remaining ^ByteBuffer %) delimiters)))
-	   prefix (when-let [b (take-contiguous-bytes max-trailing-delimiter buf-seq)]
-		    [b])]
+  ([scanned delimiters strip-delimiters?]
+     (let [delimiters (dup-buf-seq delimiters)
+	   max-trailing-delimiter (dec (apply max
+					 (map
+					   #(.remaining ^ByteBuffer %)
+					   delimiters)))
+	   prefix (when (pos? max-trailing-delimiter)
+			  (when-let [b (drop-bytes
+					 (- (buf-seq-count scanned) max-trailing-delimiter)
+					 scanned)]
+			    [b]))]
        (reify
 	 Reader
 	 (read-bytes [this b]
-	   (let [[x xs] (take-delimited-bytes (concat prefix b) delimiters strip-delimiters?)]
-	     (if x
-	       [true x xs]
-	       [false (delimited-byte-codec b delimiters strip-delimiters?) nil])))
+	   (let [[success x xs] (take-delimited-bytes (concat prefix b) delimiters strip-delimiters?)]
+	     (if success
+	       [true (concat scanned x) xs]
+	       [false (delimited-byte-codec (concat scanned b) delimiters strip-delimiters?) nil])))
 	 Writer
 	 (sizeof [_]
 	   nil)
 	 (write-bytes [_ _ v]
 	   (concat v [(.duplicate ^ByteBuffer (first delimiters))]))))))
 
-(defn delimited-block-
+(defn delimited-block
   [codec delimiters]
-  (let [inner-codec (delimited-byte-codec delimiters true)
+  (let [delimiters (dup-buf-seq delimiters)
+	inner-codec (delimited-byte-codec delimiters true)
 	delimited-codec (compose-readers
 			  inner-codec
 			  (fn [bytes remainder]
@@ -241,28 +266,27 @@
 
 (defn wrap-delimited-sequence
   [codec delimiters]
-  (let [suffix (to-byte-buffer (first delimiters))
+  (let [delimiters (dup-buf-seq (map to-byte-buffer delimiters))
+	suffix (first delimiters)
 	sizeof-delimiter (.remaining ^Buffer suffix)
-	delimited-codec (compose-readers 
-			  (delimited-byte-codec delimiters true)
-			  (take-all codec))]
+	read-codec (compose-readers 
+		     (delimited-byte-codec delimiters true)
+		     (take-all codec))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes delimited-codec b))
+	(read-bytes read-codec b))
       Writer
       (sizeof [_]
 	nil)
       (write-bytes [_ buf vs]
-	(concat
-	  (if (sizeof codec)
-	    (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
-	      (doseq [v vs]
-		(write-bytes codec buf v))
-	      (.put ^ByteBuffer buf ^ByteBuffer suffix))
-	    (write-bytes delimited-codec
-	      buf
-	      (apply concat
-		(map #(write-bytes codec buf %) vs)))))))))
+	(if (sizeof codec)
+	  (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
+	    (doseq [v vs]
+	      (write-bytes codec buf v))
+	    (.put ^ByteBuffer buf (.duplicate ^ByteBuffer suffix)))
+	  (apply concat
+	    (map #(write-bytes codec buf %) vs)
+	    [(.duplicate ^ByteBuffer suffix)]))))))
 
  
