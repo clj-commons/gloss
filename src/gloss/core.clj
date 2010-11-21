@@ -10,17 +10,19 @@
   (:use
     potemkin
     [gloss.core protocols]
-    [gloss.data primitives string])
+    [gloss.data primitives])
   (:require
     [gloss.data.bytes :as bytes]
     [gloss.core.formats :as formats]
-    [gloss.core.frame :as frame]))
+    [gloss.data.string :as string]
+    [gloss.core.codecs :as codecs]
+    [gloss.core.structure :as structure]))
 
 ;;;
 
-(import-fn #'frame/compile-frame)
+(import-fn #'structure/compile-frame)
 
-(defmacro def-frame [name frame]
+(defmacro defcodec [name frame]
   `(def ~name (compile-frame ~frame)))
 
 ;;;
@@ -30,7 +32,7 @@
 (defn contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
   [buf-seq]
-  (bytes/take-contiguous-bytes (bytes/buf-seq-count buf-seq) buf-seq))
+  (bytes/take-contiguous-bytes (bytes/byte-count buf-seq) buf-seq))
 
 (defn encode
   "Turns a frame value into a sequence of ByteBuffers."
@@ -47,7 +49,7 @@
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
   [frame bytes]
-  (let [buf-seq (bytes/dup-buf-seq (formats/to-buf-seq bytes))
+  (let [buf-seq (bytes/dup-bytes (formats/to-buf-seq bytes))
 	[success val remainder] (read-bytes frame buf-seq)]
     (when-not success
       (throw (Exception. "Insufficient bytes to decode frame.")))
@@ -59,7 +61,7 @@
   "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
    of the sequence, an exception is thrown."
   [frame bytes]
-  (let [buf-seq (bytes/dup-buf-seq (formats/to-buf-seq bytes))]
+  (let [buf-seq (bytes/dup-bytes (formats/to-buf-seq bytes))]
     (loop [buf-seq buf-seq, vals []]
       (if (empty? buf-seq)
 	vals
@@ -70,6 +72,7 @@
 
 ;;;
 
+(import-fn codecs/enum)
 
 (defn delimited-block
   [delimiters frame]
@@ -80,53 +83,29 @@
   (let [charset (name charset)]
     (cond
       (:length options)
-      (finite-string-codec charset (:length options))
+      (string/finite-string-codec charset (:length options))
 
       (:delimiters options)
       (bytes/delimited-block
-	(string-codec charset)
+	(string/string-codec charset)
 	(map to-byte-buffer (:delimiters options)))
 
       :else
-      (string-codec charset))))
+      (string/string-codec charset))))
 
 (defn header [frame header->body body->header]
-  (frame/header
+  (codecs/header
     (compile-frame frame)
     header->body
     body->header))
 
 ;;;
 
-(defn enum [& map-or-seq]
-  (let [n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
-	       (let [m (first map-or-seq)]
-		 (zipmap
-		   (map short (vals m))
-		   (keys m)))
-	       (zipmap
-		 (map short (range (count map-or-seq)))
-		 map-or-seq))
-	v->n (zipmap (vals n->v) (keys n->v))
-	codec (:int16 primitive-codecs)]
-    (reify
-      Reader
-      (read-bytes [this b]
-	(let [[success x b] (read-bytes codec b)]
-	  (if success
-	    [true (n->v (short x)) b]
-	    [false this b])))
-      Writer
-      (sizeof [_]
-	(sizeof codec))
-      (write-bytes [_ buf v]
-	(write-bytes codec buf (v->n v))))))
-
 (defn prefix
   ([primitive]
      (prefix primitive identity identity))
   ([signature to-integer from-integer]
-     (frame/prefix (compile-frame signature) to-integer from-integer)))
+     (codecs/prefix (compile-frame signature) to-integer from-integer)))
 
 (defn repeated [frame & {:as options}]
   (let [codec (compile-frame frame)]
@@ -137,6 +116,6 @@
 	(map to-byte-buffer (:delimiters options)))
       
       :else
-      (frame/wrap-prefixed-sequence
+      (codecs/wrap-prefixed-sequence
 	(or (:prefix options) (:int32 primitive-codecs))
 	codec))))

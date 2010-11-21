@@ -14,7 +14,7 @@
 
 (defn split-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
-    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buf-seq-count buf-seq))))))
+    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (byte-count buf-seq))))))
 
 (def pilchards-string (apply str (repeat 30 "¶")))
 (def pilchards (.getBytes pilchards-string "utf-8"))

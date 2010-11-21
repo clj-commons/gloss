@@ -11,7 +11,7 @@
     [gloss core io]
     [gloss.core.formats :only (to-char-buffer to-buf-seq)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
-    [gloss.data.bytes :only (take-bytes drop-bytes dup-buf-seq buf-seq-count take-contiguous-bytes)]
+    [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes byte-count take-contiguous-bytes)]
     [lamina core]
     [clojure test walk]))
 
@@ -20,7 +20,7 @@
 
 (defn split-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
-    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (buf-seq-count buf-seq))))))
+    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (byte-count buf-seq))))))
 
 (defn compare-result [expected result]
   (is (= expected (convert-char-sequences (second result))))
@@ -40,16 +40,16 @@
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
 	bytes (write-bytes f nil val)
-	;;result (read-bytes f (dup-buf-seq bytes))
-	;;split-result (read-bytes f (split-bytes 1 (dup-buf-seq bytes)))
+	result (read-bytes f (dup-bytes bytes))
+	split-result (read-bytes f (split-bytes 1 (dup-bytes bytes)))
 	]
     (test-stream-roundtrip f val)
-    ;;(compare-result val result)
-    ;;(compare-result val split-result)
+    (compare-result val result)
+    (compare-result val split-result)
     ))
 
 (defn test-full-roundtrip [f buf val]
-  (compare-result val (read-bytes f (dup-buf-seq buf)))
+  (compare-result val (read-bytes f (dup-bytes buf)))
   (is (= buf (write-bytes f nil val))))
 
 (deftest test-lists

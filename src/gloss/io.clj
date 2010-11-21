@@ -8,7 +8,7 @@
 
 (ns gloss.io
   (:use
-    [gloss.core frame protocols formats]
+    [gloss.core codecs structure protocols formats]
     [lamina core]))
 
 (defn encoder-channel [frame]
@@ -17,25 +17,25 @@
       (map* #(write-bytes frame nil %) ch)
       ch)))
 
-(defn decode-stream [frame reader buf-seq]
+(defn decode-stream [codec reader buf-seq]
   (loop [buf-seq buf-seq, vals [], reader reader]
     (if (empty? buf-seq)
-      [vals frame nil]
+      [vals codec nil]
       (let [[success x remainder] (read-bytes reader buf-seq)]
 	(if success
-	  (recur remainder (conj vals x) frame)
+	  (recur remainder (conj vals x) codec)
 	  [vals x remainder])))))
 
-(defn decoder-channel [frame]
+(defn decoder-channel [codec]
   (let [src (channel)
 	dst (channel)]
-    (run-pipeline {:reader frame :bytes nil}
+    (run-pipeline {:reader codec :bytes nil}
       (fn [state]
 	(run-pipeline dst
 	  read-channel
 	  (fn [bytes]
 	    (let [[s reader remainder] (decode-stream
-					 frame
+					 codec
 					 (:reader state)
 					 (concat (:bytes state) (to-buf-seq bytes)))]
 	      (when-not (empty? s)

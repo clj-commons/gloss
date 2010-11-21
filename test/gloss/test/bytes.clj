@@ -34,14 +34,14 @@
     (dotimes [i 101]
       (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes i bufs)))))))
 
-(defn- test-split [split-location skip-bytes source split]
+'(defn- test-split [split-location skip-bytes source split]
   (let [s (mapcat byte-seq source)
 	split (map #(mapcat byte-seq %) (rest split))]
     (if (<= split-location (count s))
       (is (= [(take split-location s) (drop (+ split-location skip-bytes) s)] split))
       (is (= [() s] split)))))
 
-(deftest test-take-delimited-bytes
+'(deftest test-take-delimited-bytes
   ;;single-byte delimiters
   (let [bufs (map to-byte-buffer (partition 3 (range 12)))]
     (dotimes [i 12]

@@ -65,5 +65,15 @@
 		  readers)]
     (reduce read-callback codec readers)))
 
+(defn take-all [codec]
+  (fn [buf-seq remainder]
+    (loop [bytes buf-seq, vals []]
+      (if (empty? bytes)
+	[true vals remainder]
+	(let [[success v b] (read-bytes codec bytes)]
+	  (when-not success
+	    (throw (Exception. "Cannot evenly divide bytes into sequence of frames.")))
+	  (recur b (conj vals v)))))))
+
 ;;;
 
