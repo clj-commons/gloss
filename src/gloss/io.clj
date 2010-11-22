@@ -20,22 +20,28 @@
 	  (recur remainder (conj vals x) codec)
 	  [vals x remainder])))))
 
-(defn decoder-channel [codec]
-  (let [src (channel)
+(defn decoder-channel [codec ch]
+  (let [src (fork ch)
 	dst (channel)]
     (run-pipeline {:reader codec :bytes nil}
       (fn [state]
-	(run-pipeline dst
+	(run-pipeline src
 	  read-channel
 	  (fn [bytes]
-	    (let [[s reader remainder] (decode-stream
-					 codec
-					 (:reader state)
-					 (concat (:bytes state) (to-buf-seq bytes)))]
-	      (when-not (empty? s)
-		(apply enqueue src s))
-	      {:reader reader :bytes remainder}))))
+	    (if-not bytes
+	      (if-not (closed? src)
+		(enqueue dst nil)
+		(enqueue-and-close dst nil))
+	      (let [[s reader remainder] (decode-stream
+					   codec
+					   (:reader state)
+					   (concat (:bytes state) (to-buf-seq bytes)))]
+		(if (closed? src)
+		  (enqueue-and-close dst (when-not (empty? s) s))
+		  (when-not (empty? s)
+		    (apply enqueue dst s)))
+		{:reader reader :bytes remainder})))))
       (fn [x]
-	(when-not (closed? dst)
+	(when-not (closed? src)
 	  (restart x))))
-    (splice src dst)))
+    (splice dst nil-channel)))

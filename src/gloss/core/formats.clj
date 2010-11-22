@@ -24,16 +24,18 @@
       :else (throw (Exception. (str "Cannot convert to buf-seq: " (with-out-str (prn x))))))))
 
 (defn to-byte-buffer [x]
-  (cond
-    (instance? Character x) (to-byte-buffer (str x))
-    (string? x) (to-byte-buffer (.getBytes ^String x "utf-8"))
-    (= (class x) byte-array-class) (ByteBuffer/wrap x)
-    (instance? ByteBuffer x) x
-    (sequential? x) (to-byte-buffer (byte-array (map #(byte (int %)) x)))
-    (number? x) (to-byte-buffer (byte-array [(byte x)]))
-    :else (throw (Exception. (str "Cannot convert to ByteBuffer: " x)))))
+  (when x
+    (cond
+      (instance? Character x) (to-byte-buffer (str x))
+      (string? x) (to-byte-buffer (.getBytes ^String x "utf-8"))
+      (= (class x) byte-array-class) (ByteBuffer/wrap x)
+      (instance? ByteBuffer x) x
+      (sequential? x) (to-byte-buffer (byte-array (map #(byte (int %)) x)))
+      (number? x) (to-byte-buffer (byte-array [(byte x)]))
+      :else (throw (Exception. (str "Cannot convert to ByteBuffer: " x))))))
 
 (defn to-char-buffer [x]
-  (if (instance? CharBuffer x)
-    x
-    (CharBuffer/wrap ^CharSequence x)))
+  (when x
+    (if (instance? CharBuffer x)
+      x
+      (CharBuffer/wrap ^CharSequence x))))

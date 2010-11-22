@@ -33,12 +33,14 @@
 (defn contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
   [buf-seq]
-  (bytes/take-contiguous-bytes (bytes/byte-count buf-seq) buf-seq))
+  (when buf-seq
+    (bytes/take-contiguous-bytes (bytes/byte-count buf-seq) buf-seq)))
 
 (defn encode
   "Turns a frame value into a sequence of ByteBuffers."
   [codec val]
-  (write-bytes codec nil val))
+  (when val
+    (write-bytes codec nil val)))
 
 (defn encode-all
   "Turns a sequence of frame values into a sequence of ByteBuffers."
@@ -77,7 +79,9 @@
 
 (defn delimited-block
   [delimiters strip-delimiters?]
-  (bytes/delimited-bytes-codec delimiters strip-delimiters?))
+  (bytes/delimited-bytes-codec
+    (map to-byte-buffer delimiters)
+    strip-delimiters?))
 
 (defn finite-block
   [len]
@@ -85,7 +89,9 @@
 
 (defn delimited-frame
   [delimiters frame]
-  (bytes/delimited-codec delimiters (compile-frame frame)))
+  (bytes/delimited-codec
+    (map to-byte-buffer delimiters)
+    (compile-frame frame)))
 
 (defn finite-frame
   [prefix-or-len frame]
@@ -104,8 +110,8 @@
 
       (:delimiters options)
       (bytes/delimited-codec
-	(string/string-codec charset)
-	(map to-byte-buffer (:delimiters options)))
+	(map to-byte-buffer (:delimiters options))
+	(string/string-codec charset))
 
       :else
       (string/string-codec charset))))
@@ -129,8 +135,8 @@
     (cond
       (:delimiters options)
       (bytes/wrap-delimited-sequence
-	codec
-	(map to-byte-buffer (:delimiters options)))
+	(map to-byte-buffer (:delimiters options))
+	codec)
       
       :else
       (codecs/wrap-prefixed-sequence

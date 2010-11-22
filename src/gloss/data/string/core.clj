@@ -80,7 +80,7 @@
 (defn nth-char [char-buf-seq length idx]
   (if (neg? idx)
     (throw (IndexOutOfBoundsException. (str idx " is not a valid index.")))
-    (loop [idx idx chars chars]
+    (loop [idx idx chars char-buf-seq]
       (let [buf ^CharBuffer (first chars)]
 	(cond
 	  (nil? buf) (throw (IndexOutOfBoundsException. (str idx "is greater than length of " length)))

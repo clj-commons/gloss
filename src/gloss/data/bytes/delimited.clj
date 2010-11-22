@@ -62,10 +62,7 @@
 
 (defn delimited-bytes-codec
   ([delimiters strip-delimiters?]
-     (delimited-bytes-codec
-       nil
-       (map to-byte-buffer delimiters)
-       strip-delimiters?))
+     (delimited-bytes-codec nil delimiters strip-delimiters?))
   ([scanned delimiters strip-delimiters?]
      (let [delimiters (dup-bytes delimiters)
 	   max-delimiter-size (apply max
@@ -89,7 +86,7 @@
 	   (concat v [(.duplicate ^ByteBuffer (first delimiters))]))))))
 
 (defn delimited-codec
-  [codec delimiters]
+  [delimiters codec]
   (let [delimiters (dup-bytes delimiters)
 	delimited-codec (compose-callback
 			  (delimited-bytes-codec delimiters true)
@@ -114,7 +111,7 @@
 	  [(.duplicate ^ByteBuffer (first delimiters))])))))
 
 (defn wrap-delimited-sequence
-  [codec delimiters]
+  [delimiters codec]
   (let [delimiters (dup-bytes delimiters)
 	suffix (first delimiters)
 	sizeof-delimiter (.remaining ^Buffer suffix)
