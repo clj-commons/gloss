@@ -11,12 +11,6 @@
     [gloss.core codecs structure protocols formats]
     [lamina core]))
 
-(defn encoder-channel [frame]
-  (let [ch (channel)]
-    (splice
-      (map* #(write-bytes frame nil %) ch)
-      ch)))
-
 (defn decode-stream [codec reader buf-seq]
   (loop [buf-seq buf-seq, vals [], reader reader]
     (if (empty? buf-seq)
@@ -41,5 +35,7 @@
 	      (when-not (empty? s)
 		(apply enqueue src s))
 	      {:reader reader :bytes remainder}))))
-      restart)
+      (fn [x]
+	(when-not (closed? dst)
+	  (restart x))))
     (splice src dst)))

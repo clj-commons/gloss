@@ -9,7 +9,7 @@
 (ns gloss.test.core
   (:use
     [gloss core io]
-    [gloss.core.formats :only (to-char-buffer to-buf-seq)]
+    [gloss.core.formats :only (to-char-buffer)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
     [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes byte-count take-contiguous-bytes)]
     [lamina core]
@@ -136,5 +136,5 @@
     [:a (string :utf-8 :delimiters ["xyz"])]
     [:a "abc"])
   (test-roundtrip
-    (finite-block 5 (string :utf-8))
+    (finite-frame 5 (string :utf-8))
     "abcde"))

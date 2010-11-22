@@ -22,8 +22,9 @@
 (import-fn core/rewind-bytes)
 (import-fn core/dup-bytes)
 
-(import-fn delimited/delimited-block)
+(import-fn delimited/delimited-codec)
 (import-fn delimited/wrap-delimited-sequence)
+(import-fn delimited/delimited-bytes-codec)
 
 (defn finite-byte-codec
   [len]

@@ -55,14 +55,13 @@
 	    [^CharBuffer chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
 	(if-not (.hasRemaining chars)
 	  [true (.rewind chars) bytes]
-	  [false (finite-string-codec- charset len decoder char-buf) buf-seq])))
+	  [false (finite-string-codec- charset len decoder char-buf) bytes])))
     Writer
     (sizeof [_]
       nil)
-    (write-bytes [_ _ strs]
+    (write-bytes [_ _ str]
       (let [encoder (create-encoder charset)]
-	(apply concat
-	  (map #(.encode ^CharsetEncoder encoder (to-char-buffer %)) strs))))))
+	[(.encode ^CharsetEncoder encoder (to-char-buffer str))]))))
 
 (defn finite-string-codec
   [charset len]

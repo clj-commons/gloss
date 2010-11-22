@@ -28,6 +28,7 @@
 ;;;
 
 (import-fn #'formats/to-byte-buffer)
+(import-fn #'formats/to-buf-seq)
 
 (defn contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
@@ -49,7 +50,7 @@
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
   [codec bytes]
-  (let [buf-seq (bytes/dup-bytes (formats/to-buf-seq bytes))
+  (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
 	[success val remainder] (read-bytes codec buf-seq)]
     (when-not success
       (throw (Exception. "Insufficient bytes to decode frame.")))
@@ -61,7 +62,7 @@
   "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
    of the sequence, an exception is thrown."
   [codec bytes]
-  (let [buf-seq (bytes/dup-bytes (formats/to-buf-seq bytes))]
+  (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))]
     (loop [buf-seq buf-seq, vals []]
       (if (empty? buf-seq)
 	vals
@@ -75,10 +76,18 @@
 (import-fn codecs/enum)
 
 (defn delimited-block
-  [delimiters frame]
-  (bytes/delimited-block delimiters (compile-frame frame)))
+  [delimiters strip-delimiters?]
+  (bytes/delimited-bytes-codec delimiters strip-delimiters?))
 
 (defn finite-block
+  [len]
+  (bytes/finite-byte-codec len))
+
+(defn delimited-frame
+  [delimiters frame]
+  (bytes/delimited-codec delimiters (compile-frame frame)))
+
+(defn finite-frame
   [prefix-or-len frame]
   (bytes/wrap-finite-block
     (if (number? prefix-or-len)
@@ -94,7 +103,7 @@
       (string/finite-string-codec charset (:length options))
 
       (:delimiters options)
-      (bytes/delimited-block
+      (bytes/delimited-codec
 	(string/string-codec charset)
 	(map to-byte-buffer (:delimiters options)))
 
