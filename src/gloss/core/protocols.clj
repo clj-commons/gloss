@@ -42,28 +42,39 @@
 	  (recur (conj result x) xs)
 	  result)))))
 
-(defn- read-callback [codec callback]
+(defn compose-callback [codec callback]
   (reify
     Reader
     (read-bytes [this buf-seq]
       (let [[success x bytes] (read-bytes codec buf-seq)]
 	(if success
 	  (callback x bytes)
-	  [false (read-callback x callback) bytes])))
+	  [false (compose-callback x callback) bytes])))
     Writer
     (sizeof [_]
       (sizeof codec))
     (write-bytes [_ buf val]
       (throw (Exception. "write-bytes not supported")))))
 
-(defn compose-readers [codec & readers]
-  (let [readers (map
-		  (fn [rd]
-		    (if (reader? rd)
-		      #(apply read-bytes rd %)
-		      rd))
-		  readers)]
-    (reduce read-callback codec readers)))
+(defn compose-readers [a b]
+  (reify
+    Reader
+    (read-bytes [this buf-seq]
+      (let [[success x bytes] (read-bytes a buf-seq)]
+	(if success
+	  (read-bytes
+	    (compose-callback
+	      b
+	      (fn [v remainder]
+		(assert (empty? remainder))
+		[true v bytes]))
+	    x)
+	  [false (compose-readers x b) bytes])))
+    Writer
+    (sizeof [_]
+      nil)
+    (write-bytes [_ buf val]
+      (throw (Exception. "write-bytes not supported")))))
 
 (defn take-all [codec]
   (fn [buf-seq remainder]

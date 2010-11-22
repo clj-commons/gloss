@@ -39,13 +39,17 @@
     (write-bytes [_ _ v]
       v)))
 
-(defn finite-block
-  [prefix-codec]
+(defn wrap-finite-block
+  [prefix-codec codec]
   (assert (sizeof prefix-codec))
-  (let [read-codec (compose-readers
+  (let [read-codec (compose-callback
 		     prefix-codec
 		     (fn [len b]
-		       (read-bytes (finite-byte-codec len) b)))]
+		       (read-bytes
+			 (compose-readers
+			   (finite-byte-codec len)
+			   codec)
+			 b)))]
     (reify
       Reader
       (read-bytes [_ b]
@@ -54,9 +58,11 @@
       (sizeof [_]
 	nil)
       (write-bytes [_ buf v]
-	(concat
-	  (with-buffer [buf (sizeof prefix-codec)]
-	    (write-bytes prefix-codec buf v))
-	  v)))))
+	(let [buf-seq (write-bytes codec nil v)]
+	  (concat
+	   (write-bytes prefix-codec nil (byte-count buf-seq))
+	   buf-seq))))))
+
+
 
  

@@ -14,7 +14,7 @@
 ;;;
 
 (defn header [codec header->body body->header]
-  (let [read-codec (compose-readers
+  (let [read-codec (compose-callback
 		     codec
 		     (fn [v b]
 		       (let [body (header->body v)]
@@ -34,7 +34,7 @@
 
 (defn prefix
   [codec to-integer from-integer]
-  (let [read-codec (compose-readers
+  (let [read-codec (compose-callback
 		     codec
 		     (fn [x b]
 		       [true (to-integer x) b]))]
@@ -47,6 +47,18 @@
 	(sizeof codec))
       (write-bytes [_ buf v]
 	(write-bytes codec buf (from-integer v))))))
+
+(defn constant-prefix
+  [len]
+  (reify
+    Reader
+    (read-bytes [_ b]
+      [true len b])
+    Writer
+    (sizeof [_]
+      len)
+    (write-bytes [_ buf v]
+      nil)))
 
 ;;;
 
@@ -76,7 +88,7 @@
 (defn wrap-prefixed-sequence
   [prefix-codec codec]
   (assert (sizeof prefix-codec))
-  (let [read-codec (compose-readers
+  (let [read-codec (compose-callback
 		     prefix-codec
 		     (fn [len b]
 		       (if (insufficient-bytes? codec b len nil)

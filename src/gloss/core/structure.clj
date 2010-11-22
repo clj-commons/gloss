@@ -33,10 +33,9 @@
 		(if success
 		  (recur b (rest s) (conj result x))
 		  [false
-		   (compose-readers
+		   (compose-callback
 		     x
-		     (fn [v b]
-		       (read-bytes (sequence-reader (conj result v) (rest s)) b)))
+		     #(read-bytes (sequence-reader (conj result %1) (rest s)) %2))
 		   b])))))))))
 
 (defn convert-sequence
@@ -69,7 +68,7 @@
   (let [ks (sort (keys frame))
 	vs (map frame ks)
 	codec (convert-sequence vs)
-	read-codec (compose-readers 
+	read-codec (compose-callback 
 		     codec
 		     (fn [x b]
 		       [true (zipmap ks x) b]))]

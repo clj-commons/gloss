@@ -36,21 +36,21 @@
 
 (defn encode
   "Turns a frame value into a sequence of ByteBuffers."
-  [frame val]
-  (write-bytes frame nil val))
+  [codec val]
+  (write-bytes codec nil val))
 
 (defn encode-all
   "Turns a sequence of frame values into a sequence of ByteBuffers."
-  [frame vals]
+  [codec vals]
   (apply concat
-    (map #(write-bytes frame nil %) vals)))
+    (map #(write-bytes codec nil %) vals)))
 
 (defn decode
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
-  [frame bytes]
+  [codec bytes]
   (let [buf-seq (bytes/dup-bytes (formats/to-buf-seq bytes))
-	[success val remainder] (read-bytes frame buf-seq)]
+	[success val remainder] (read-bytes codec buf-seq)]
     (when-not success
       (throw (Exception. "Insufficient bytes to decode frame.")))
     (when-not (empty? remainder)
@@ -60,12 +60,12 @@
 (defn decode-all
   "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
    of the sequence, an exception is thrown."
-  [frame bytes]
+  [codec bytes]
   (let [buf-seq (bytes/dup-bytes (formats/to-buf-seq bytes))]
     (loop [buf-seq buf-seq, vals []]
       (if (empty? buf-seq)
 	vals
-	(let [[success val remainder] (read-bytes frame buf-seq)]
+	(let [[success val remainder] (read-bytes codec buf-seq)]
 	  (when-not success
 	    (throw (Exception. "Bytes left over after decoding sequence of frames.")))
 	  (recur remainder (conj vals val)))))))
@@ -77,6 +77,14 @@
 (defn delimited-block
   [delimiters frame]
   (bytes/delimited-block delimiters (compile-frame frame)))
+
+(defn finite-block
+  [prefix-or-len frame]
+  (bytes/wrap-finite-block
+    (if (number? prefix-or-len)
+      (codecs/constant-prefix prefix-or-len)
+      (compile-frame prefix-or-len))
+    (compile-frame frame)))
 
 (defn string
   [charset & {:as options}]

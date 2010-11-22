@@ -134,4 +134,7 @@
     ["abc" "def"])
   (test-roundtrip
     [:a (string :utf-8 :delimiters ["xyz"])]
-    [:a "abc"]))
+    [:a "abc"])
+  (test-roundtrip
+    (finite-block 5 (string :utf-8))
+    "abcde"))

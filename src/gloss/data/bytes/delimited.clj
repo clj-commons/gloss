@@ -91,7 +91,7 @@
 (defn delimited-block
   [codec delimiters]
   (let [delimiters (dup-bytes delimiters)
-	delimited-codec (compose-readers
+	delimited-codec (compose-callback
 			  (delimited-byte-codec delimiters true)
 			  (fn [bytes remainder]
 			    (let [[success v remainder*] (read-bytes codec bytes)]
@@ -118,7 +118,7 @@
   (let [delimiters (dup-bytes delimiters)
 	suffix (first delimiters)
 	sizeof-delimiter (.remaining ^Buffer suffix)
-	read-codec (compose-readers 
+	read-codec (compose-callback
 		     (delimited-byte-codec delimiters true)
 		     (take-all codec))]
     (reify
