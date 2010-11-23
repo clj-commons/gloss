@@ -25,12 +25,17 @@
 	(read-bytes read-codec buf-seq))
       Writer
       (sizeof [_]
-	nil)
+	)
       (write-bytes [_ buf val]
-	(let [header (body->header val)]
-	  (concat
-	    (write-bytes codec buf (body->header val))
-	    (write-bytes (header->body header) buf val)))))))
+	(let [header (body->header val)
+	      body (header->body header)]
+	  (if (and (sizeof codec) (sizeof body))
+	    (with-buffer [buf (+ (sizeof codec) (sizeof body))]
+	      (write-bytes codec buf header)
+	      (write-bytes body buf val))
+	    (concat
+	      (write-bytes codec buf header)
+	      (write-bytes body buf val))))))))
 
 (defn prefix
   [codec to-integer from-integer]
@@ -87,35 +92,42 @@
 
 (defn wrap-prefixed-sequence
   [prefix-codec codec]
-  (assert (sizeof prefix-codec))
   (let [read-codec (compose-callback
 		     prefix-codec
 		     (fn [len b]
 		       (if (insufficient-bytes? codec b len nil)
 			 [false (prefixed-sequence-reader codec codec len []) b]
-			 (read-prefixed-sequence codec codec b len []))))
-	sizeof-prefix (sizeof prefix-codec)]
+			 (read-prefixed-sequence codec codec b len []))))]
     (reify
       Reader
       (read-bytes [_ b]
 	(read-bytes read-codec b))
       Writer
+      (sizeof [_]
+	nil)
       (write-bytes [_ buf vs]
 	(let [cnt (count vs)]
-	  (if (sizeof codec)
-	    (with-buffer [buf (+ sizeof-prefix (* cnt (sizeof codec)))]
+	  (if (and (sizeof prefix-codec) (sizeof codec))
+	    (with-buffer [buf (+ (sizeof prefix-codec) (* cnt (sizeof codec)))]
 	      (write-bytes prefix-codec buf cnt)
 	      (doseq [v vs]
 		(write-bytes codec buf v)))
 	    (concat
-	      (with-buffer [buf sizeof-prefix]
-		(write-bytes prefix-codec buf cnt))
+	      (write-bytes prefix-codec buf cnt)
 	      (apply concat
 		(map #(write-bytes codec buf %) vs)))))))))
 
 ;;;
 
-(defn enum [& map-or-seq]
+(defn enum
+  "Takes a list of enumerations, or a map of enumerations onto values, and returns
+   a codec which associates each enumeration with a unique encoded value.  Each enumeration
+   will be stored as a 16-bit signed integer, and the absolute associated values must be less
+   than 2^15.
+
+   (enum :a :b :c)
+   (enum {:a 100, :b 200, :c 300})"
+  [& map-or-seq]
   (let [n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
 	       (let [m (first map-or-seq)]
 		 (zipmap

@@ -88,10 +88,13 @@
     (sequential? f) (convert-sequence (map compile-frame- f))
     :else f))
 
-(defn compile-frame [f]
-  (if (reader? f)
-    f
-    (->> f
+(defn compile-frame
+  "Takes a frame, and returns a codec.  This function is idempotent; passing in a codec
+   is a safe operation."
+  [frame]
+  (if (reader? frame)
+    frame
+    (->> frame
      (postwalk-replace primitive-codecs)
      compile-frame-)))
 

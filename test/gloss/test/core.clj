@@ -139,3 +139,14 @@
   (test-roundtrip
     (finite-frame 5 (string :utf-8))
     "abcde"))
+
+(deftest test-string-numbers
+  (test-roundtrip
+    (repeated (string-integer :utf-8 :length 5))
+    [12345 67890])
+  (test-roundtrip
+    (repeated (string-integer :ascii :delimiters ["x"]))
+    [1 23 456 7890])
+  (test-roundtrip
+    (repeated (string-float :ascii :delimiters ["x"]))
+    [(/ 3 2) 1.5 0.66666]))

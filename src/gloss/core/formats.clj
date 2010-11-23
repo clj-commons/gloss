@@ -15,7 +15,9 @@
 
 (def byte-array-class (class (byte-array [])))
 
-(defn to-buf-seq [x]
+(defn to-buf-seq
+  "Converts the value to a sequence of ByteBuffers."
+  [x]
   (when x
     (cond
       (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x
@@ -23,7 +25,9 @@
       (instance? ByteBuffer x) [x]
       :else (throw (Exception. (str "Cannot convert to buf-seq: " (with-out-str (prn x))))))))
 
-(defn to-byte-buffer [x]
+(defn to-byte-buffer
+  "Converts the value to a Bytebuffer."
+  [x]
   (when x
     (cond
       (instance? Character x) (to-byte-buffer (str x))
@@ -34,7 +38,9 @@
       (number? x) (to-byte-buffer (byte-array [(byte x)]))
       :else (throw (Exception. (str "Cannot convert to ByteBuffer: " x))))))
 
-(defn to-char-buffer [x]
+(defn to-char-buffer
+  "Converts the value to a CharBuffer."
+  [x]
   (when x
     (if (instance? CharBuffer x)
       x
