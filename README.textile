@@ -2,4 +2,4 @@ Gloss is a byte-format DSL.  It can turn complicated byte formats into Clojure d
 
 Read more about it "here":https://github.com/ztellman/gloss/wiki.
 
-Distributed under the Eclipse Public License also used by Clojure.
+Distributed under the Eclipse Public License, which is also used by Clojure.
