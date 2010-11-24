@@ -27,6 +27,11 @@
   [name frame]
   `(def ~name (compile-frame ~frame)))
 
+(defmacro defcodec-
+  "Defines a private compiled frame."
+  [name frame]
+  `(defcodec ^{:private true} ~name ~frame))
+
 ;;;
 
 (import-fn #'formats/to-byte-buffer)
