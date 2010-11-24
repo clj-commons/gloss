@@ -9,7 +9,7 @@
 (ns gloss.core.codecs
   (:use
     [gloss.data bytes string primitives]
-    [gloss.core protocols]))
+    [gloss.core protocols structure]))
 
 ;;;
 
@@ -150,3 +150,28 @@
 	(sizeof codec))
       (write-bytes [_ buf v]
 	(write-bytes codec buf (v->n v))))))
+
+;;;
+
+(defn ordered-map
+  "Creates a codec which consumes and emits standard Clojure hash-maps, but
+   ensures that the values are encoded in the specified order.  Useful for
+   interop with C structs and network protocols."
+  [& key-value-pairs]
+  (assert (even? (count key-value-pairs)))
+  (let [pairs (partition 2 key-value-pairs)
+	ks (map first pairs)
+	vs (map compile-frame (map second pairs))
+	codec (convert-sequence vs)
+	read-codec (compose-callback
+		     codec
+		     (fn [v b] [true (zipmap ks v) b]))]
+    (reify
+      Reader
+      (read-bytes [_ b]
+	(read-bytes read-codec b))
+      Writer
+      (sizeof [_]
+	(sizeof codec))
+      (write-bytes [_ buf v]
+	(write-bytes codec buf (map #(get v %) ks))))))

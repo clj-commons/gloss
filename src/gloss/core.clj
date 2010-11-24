@@ -83,6 +83,7 @@
 ;;;
 
 (import-fn codecs/enum)
+(import-fn codecs/ordered-map)
 
 (defn delimited-block
   "Defines a frame which is just a byte sequence terminated by one or more delimiters.

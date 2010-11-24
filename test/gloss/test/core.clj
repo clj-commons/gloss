@@ -150,3 +150,11 @@
   (test-roundtrip
     (repeated (string-float :ascii :delimiters ["x"]))
     [(/ 3 2) 1.5 0.66666]))
+
+(deftest test-ordered-map
+  (test-roundtrip
+    (ordered-map :b :int32 :a :int32)
+    {:a 1 :b 2})
+  (test-roundtrip
+    (ordered-map :b :int32 :a [:int32 :int32])
+    {:a [2 3] :b 1}))
