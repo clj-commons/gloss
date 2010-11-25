@@ -120,10 +120,10 @@
 
 (deftest test-enum
   (test-roundtrip
-    (enum :a :b :c)
+    (enum :byte :a :b :c)
     :a)
   (test-roundtrip
-    (enum {:a 100 :b 1000})
+    (enum :int16 {:a 100 :b 1000})
     :b))
 
 (deftest test-string

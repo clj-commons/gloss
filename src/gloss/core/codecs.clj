@@ -25,7 +25,7 @@
 	(read-bytes read-codec buf-seq))
       Writer
       (sizeof [_]
-	)
+	nil)
       (write-bytes [_ buf val]
 	(let [header (body->header val)
 	      body (header->body header)]
@@ -64,6 +64,17 @@
       len)
     (write-bytes [_ buf v]
       nil)))
+
+(def identity-codec
+  (reify
+    Reader
+    (read-bytes [_ b]
+      [true b nil])
+    Writer
+    (sizeof [_]
+      nil)
+    (write-bytes [_ _ b]
+      b)))
 
 ;;;
 
@@ -121,29 +132,28 @@
 
 (defn enum
   "Takes a list of enumerations, or a map of enumerations onto values, and returns
-   a codec which associates each enumeration with a unique encoded value.  Each enumeration
-   will be stored as a 16-bit signed integer, and the absolute associated values must be less
-   than 2^15.
+   a codec which associates each enumeration with a unique encoded value.
 
-   (enum :a :b :c)
-   (enum {:a 100, :b 200, :c 300})"
-  [& map-or-seq]
+   (enum :byte :a :b :c)
+   (enum :int32 {:a 100, :b 200, :c 300})"
+  [primitive-type & map-or-seq]
+  (assert (primitive-codecs primitive-type))
   (let [n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
 	       (let [m (first map-or-seq)]
 		 (zipmap
-		   (map short (vals m))
+		   (map int (vals m))
 		   (keys m)))
 	       (zipmap
-		 (map short (range (count map-or-seq)))
+		 (map int (range (count map-or-seq)))
 		 map-or-seq))
 	v->n (zipmap (vals n->v) (keys n->v))
-	codec (:int16 primitive-codecs)]
+	codec (primitive-codecs primitive-type)]
     (reify
       Reader
       (read-bytes [this b]
 	(let [[success x b] (read-bytes codec b)]
 	  (if success
-	    [true (n->v (short x)) b]
+	    [true (n->v (int x)) b]
 	    [false this b])))
       Writer
       (sizeof [_]

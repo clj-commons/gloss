@@ -42,7 +42,6 @@
 
 (defn wrap-finite-block
   [prefix-codec codec]
-  (assert (sizeof prefix-codec))
   (let [read-codec (compose-callback
 		     prefix-codec
 		     (fn [len b]

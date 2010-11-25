@@ -97,8 +97,10 @@
 
 (defn finite-block
   "Defines a frame which is just a fixed-length byte seuqences."
-  [len]
-  (bytes/finite-byte-codec len))
+  [prefix-or-len]
+  (if (number? prefix-or-len)
+    (bytes/finite-byte-codec prefix-or-len)
+    (bytes/wrap-finite-block prefix-or-len codecs/identity-codec)))
 
 (defn delimited-frame
   "Defines a frame which is terminated by delimiters."
