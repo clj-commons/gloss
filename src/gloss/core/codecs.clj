@@ -117,6 +117,8 @@
       (sizeof [_]
 	nil)
       (write-bytes [_ buf vs]
+	(when-not (sequential? vs)
+	  (throw (Exception. (str "Expected a sequence, but got " vs))))
 	(let [cnt (count vs)]
 	  (if (and (sizeof prefix-codec) (sizeof codec))
 	    (with-buffer [buf (+ (sizeof prefix-codec) (* cnt (sizeof codec)))]
@@ -159,7 +161,9 @@
       (sizeof [_]
 	(sizeof codec))
       (write-bytes [_ buf v]
-	(write-bytes codec buf (v->n v))))))
+	(if-let [n (v->n v)]
+	  (write-bytes codec buf n)
+	  (throw (Exception. (str "Expected one of " (keys v->n) ", but got " v))))))))
 
 ;;;
 
@@ -184,4 +188,6 @@
       (sizeof [_]
 	(sizeof codec))
       (write-bytes [_ buf v]
+	(when-not (map? v)
+	  (throw (Exception. (str "Expected a map, but got " v))))
 	(write-bytes codec buf (map #(get v %) ks))))))

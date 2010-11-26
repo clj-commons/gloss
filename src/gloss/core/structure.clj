@@ -54,6 +54,8 @@
       Writer
       (sizeof [_] sizeof)
       (write-bytes [_ buf vs]
+	(when-not (sequential? vs)
+	  (throw (Exception. (str "Expected a sequence, but got " vs))))
 	(if finite-frame?
 	  (with-buffer [buf sizeof]
 	    (doseq [[[_ x] v] (filter ffirst (map list s vs))]
@@ -80,6 +82,8 @@
       (sizeof [_]
 	(sizeof codec))
       (write-bytes [_ buf v]
+	(when-not (map? v)
+	  (throw (Exception. (str "Expected a map, but got " v))))
 	(write-bytes codec buf (map v ks))))))
 
 (defn- compile-frame- [f]

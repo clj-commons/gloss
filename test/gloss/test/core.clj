@@ -149,7 +149,10 @@
     [1 23 456 7890])
   (test-roundtrip
     (repeated (string-float :ascii :delimiters ["x"]))
-    [(/ 3 2) 1.5 0.66666]))
+    [(/ 3 2) 1.5 0.66666])
+  (test-roundtrip
+    (repeated :int32 :prefix (prefix (string-integer :ascii :delimiters ["x"]) identity identity))
+    [1 2 3]))
 
 (deftest test-ordered-map
   (test-roundtrip

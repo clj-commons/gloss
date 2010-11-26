@@ -60,6 +60,8 @@
     (sizeof [_]
       nil)
     (write-bytes [_ _ str]
+      (when-not (instance? CharSequence str)
+	(throw (Exception. (str "Expected a CharSequence, but got " str))))
       (let [encoder (create-encoder charset)]
 	[(.encode ^CharsetEncoder encoder (to-char-buffer str))]))))
 
@@ -106,4 +108,6 @@
     (sizeof [_]
       nil)
     (write-bytes [_ _ s]
+      (when-not (instance? CharSequence s)
+	(throw (Exception. (str "Expected a CharSequence, but got " s " " (class s)))))
       [(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))])))
