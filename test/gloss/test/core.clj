@@ -30,7 +30,7 @@
 (defn test-stream-roundtrip [frame vals]
   (let [bytes (split-bytes 1 (encode frame vals))
 	in (channel)
-	out (decoder-channel frame in)]
+	out (decode-channel frame in)]
     (doseq [b bytes]
       (enqueue in b))
     (let [s (convert-char-sequences (channel-seq out))]
