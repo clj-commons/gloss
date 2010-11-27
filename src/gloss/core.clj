@@ -9,10 +9,11 @@
 (ns gloss.core
   (:use
     potemkin
-    [gloss.core protocols]
+    [gloss.core.protocols :exclude (sizeof)]
     [gloss.data primitives]
     [gloss.core.formats :only (to-byte-buffer to-buf-seq)])
   (:require
+    [gloss.core.protocols :as protocols]
     [gloss.data.bytes :as bytes]
     [gloss.core.formats :as formats]
     [gloss.data.string :as string]
@@ -32,6 +33,8 @@
   "Defines a private compiled frame."
   [name frame]
   `(defcodec ^{:private true} ~name ~frame))
+
+(import-fn #'protocols/sizeof)
 
 ;;;
 
