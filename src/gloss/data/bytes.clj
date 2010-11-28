@@ -21,6 +21,7 @@
 (import-fn core/take-contiguous-bytes)
 (import-fn core/rewind-bytes)
 (import-fn core/dup-bytes)
+(import-fn core/duplicate)
 
 (import-fn delimited/delimited-codec)
 (import-fn delimited/wrap-delimited-sequence)

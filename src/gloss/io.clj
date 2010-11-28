@@ -51,7 +51,8 @@
   [codec vals]
   (if-let [size (sizeof codec)]
     (let [buf (ByteBuffer/allocate (* size (count vals)))]
-      (encode-to-buffer codec buf vals))
+      (encode-to-buffer codec buf vals)
+      [(.rewind buf)])
     (apply concat
       (map #(write-bytes codec nil %) vals))))
 

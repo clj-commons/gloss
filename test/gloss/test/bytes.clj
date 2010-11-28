@@ -14,7 +14,7 @@
   (:import [java.nio ByteBuffer]))
 
 (defn byte-seq [^ByteBuffer buf]
-  (let [buf (.duplicate buf)]
+  (let [buf (duplicate buf)]
     (lazy-seq
       (when (.hasRemaining buf)
 	(cons (.get buf) (byte-seq buf))))))

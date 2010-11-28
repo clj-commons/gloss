@@ -83,7 +83,7 @@
 	 (sizeof [_]
 	   nil)
 	 (write-bytes [_ _ v]
-	   (concat v [(.duplicate ^ByteBuffer (first delimiters))]))))))
+	   (concat v [(duplicate (first delimiters))]))))))
 
 (defn delimited-codec
   [delimiters codec]
@@ -108,7 +108,7 @@
 	    (with-buffer [buf (sizeof codec)]
 	      (write-bytes codec buf v))
 	    (write-bytes codec buf v))
-	  [(.duplicate ^ByteBuffer (first delimiters))])))))
+	  [(duplicate (first delimiters))])))))
 
 (defn wrap-delimited-sequence
   [delimiters codec]
@@ -130,8 +130,8 @@
 	  (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
 	    (doseq [v vs]
 	      (write-bytes codec buf v))
-	    (.put ^ByteBuffer buf (.duplicate ^ByteBuffer suffix)))
+	    (.put ^ByteBuffer buf (duplicate suffix)))
 	  (apply concat
 	    (map #(write-bytes codec buf %) vs)
-	    [(.duplicate ^ByteBuffer suffix)]))))))
+	    [(duplicate suffix)]))))))
 
