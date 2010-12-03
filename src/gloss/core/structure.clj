@@ -45,7 +45,7 @@
 	codecs (filter reader? frame)
 	sizeof (when finite-frame? (apply + (map sizeof codecs)))
 	reader (sequence-reader [] s)]
-    (reify
+     (reify
       Reader
       (read-bytes [this b]
 	(if (and sizeof (< (byte-count b) sizeof))
@@ -95,12 +95,27 @@
 (defn compile-frame
   "Takes a frame, and returns a codec.  This function is idempotent; passing in a codec
    is a safe operation."
-  [frame]
-  (if (reader? frame)
-    frame
-    (->> frame
-     (postwalk-replace primitive-codecs)
-     compile-frame-)))
+  ([frame]
+     (if (reader? frame)
+       frame
+       (->> frame
+	 (postwalk-replace primitive-codecs)
+	 compile-frame-)))
+  ([frame pre-encoder post-decoder]
+     (let [codec (compile-frame frame)
+	   read-codec (compose-callback
+			codec
+			(fn [x b]
+			  [true (post-decoder x) b]))]
+       (reify
+	 Reader
+	 (read-bytes [_ b]
+	   (read-bytes read-codec b))
+	 Writer
+	 (sizeof [_]
+	   (sizeof codec))
+	 (write-bytes [_ buf v]
+	   (write-bytes codec buf (pre-encoder v)))))))
 
 
 

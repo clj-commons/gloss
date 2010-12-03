@@ -46,11 +46,13 @@
   (let [read-codec (compose-callback
 		     prefix-codec
 		     (fn [len b]
-		       (read-bytes
-			 (compose-readers
-			   (finite-byte-codec len)
-			   codec)
-			 b)))]
+		       (if (zero? len)
+			 [true nil b]
+			 (read-bytes
+			   (compose-readers
+			     (finite-byte-codec len)
+			     codec)
+			   b))))]
     (reify
       Reader
       (read-bytes [_ b]
