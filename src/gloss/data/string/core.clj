@@ -100,6 +100,7 @@
 
 (defn create-char-sequence [char-buf-seq]
   (let [length (apply + (map #(.remaining ^CharBuffer %) char-buf-seq))]
+    ^{:type ::char-sequence}
     (reify
       
       CharSequence
@@ -111,5 +112,5 @@
       clojure.lang.Counted
       (count [_] length))))
 
-
-
+(defmethod print-method ::char-sequence [char-seq writer]
+  (print-method (str char-seq) writer))

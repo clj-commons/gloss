@@ -54,7 +54,7 @@
 	    char-buf (or char-buf (CharBuffer/allocate len))
 	    [^CharBuffer chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
 	(if-not (.hasRemaining chars)
-	  [true (.rewind chars) bytes]
+	  [true (create-char-sequence [(.rewind chars)]) bytes]
 	  [false (finite-string-codec- charset len decoder char-buf) bytes])))
     Writer
     (sizeof [_]
