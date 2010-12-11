@@ -104,10 +104,16 @@
 (defn wrap-prefixed-sequence
   [prefix-codec codec]
   (let [read-codec (compose-callback
-		     prefix-codec
+		     (compile-frame prefix-codec)
 		     (fn [len b]
-		       (if (insufficient-bytes? codec b len nil)
+		       (cond
+			 (zero? len)
+			 [true nil b]
+		       
+			 (insufficient-bytes? codec b len nil)
 			 [false (prefixed-sequence-reader codec codec len []) b]
+
+			 :else
 			 (read-prefixed-sequence codec codec b len []))))]
     (reify
       Reader

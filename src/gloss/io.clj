@@ -18,7 +18,9 @@
     [java.nio.channels
      Channels]
     [java.nio
-     ByteBuffer]))
+     ByteBuffer]
+    [java.io
+     InputStream]))
 
 ;;;
 
@@ -124,3 +126,14 @@
 	(when-not (closed? src)
 	  (restart x))))
     (splice dst nil-channel)))
+
+(defn decode-stream [codec ^InputStream stream]
+  (let [ch (channel)]
+    (.start
+      (Thread.
+	(fn []
+	  (loop []
+	    (let [ary (byte-array (.available stream))]
+	      (.read stream ary)
+	      ())))))
+    (lazy-channel-seq (decode-channel codec ch))))

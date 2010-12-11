@@ -93,6 +93,10 @@
     (repeat 100 {:a 1 :b 2}))
   (test-roundtrip
     (repeated :int32 :prefix (prefix :byte))
+    (range 100))
+  (test-roundtrip
+    (finite-frame (prefix :int16)
+      (repeated :int32 :prefix :none))
     (range 100)))
 
 (deftest test-complex-prefix

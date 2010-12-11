@@ -56,7 +56,7 @@
   [prefix-or-len]
   (if (number? prefix-or-len)
     (bytes/finite-byte-codec prefix-or-len)
-    (bytes/wrap-finite-block prefix-or-len codecs/identity-codec)))
+    (bytes/wrap-finite-block (compile-frame prefix-or-len) codecs/identity-codec)))
 
 (defn delimited-frame
   "Defines a frame which is terminated by delimiters."
@@ -164,8 +164,8 @@
      (fn [n] [\"hello\" n]))
 
    For complex prefixes, 'to-integer' must take the value of the header and return the length
-   of the sequence that follows, and 'from-integer' must take the length of the sequence and return
-   the value of the prefix."
+   of the sequence that follows, and 'from-integer' must take the length of the sequence and
+   return the value of the prefix."
   ([primitive]
      (prefix primitive identity identity))
   ([signature to-integer from-integer]
@@ -182,8 +182,25 @@
       (bytes/wrap-delimited-sequence
 	(map to-byte-buffer (:delimiters options))
 	codec)
+
+      (= :none (:prefix options))
+      (let [reader (take-all codec)]
+	(reify
+	  Reader
+	  (read-bytes [_ b]
+	    (reader b nil))
+	  Writer
+	  (sizeof [_]
+	    nil)
+	  (write-bytes [_ buf vs]
+	    (if-let [size (sizeof codec)]
+	      (with-buffer [buf (* (count vs) size)]
+		(doseq [v vs]
+		  (write-bytes codec buf v)))
+	      (apply concat
+		(map #(write-bytes codec nil %) vs))))))
       
       :else
       (codecs/wrap-prefixed-sequence
-	(or (:prefix options) (:int32 primitive-codecs))
+	(or (compile-frame (:prefix options)) (:int32 primitive-codecs))
 	codec))))
