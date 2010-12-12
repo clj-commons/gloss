@@ -16,24 +16,45 @@
     [clojure test walk]))
 
 (defn convert-char-sequences [x]
-  (postwalk #(if (instance? CharSequence %) (str %) %) x))
+  (postwalk
+    #(if (instance? CharSequence %)
+       (str %)
+       %)
+    x))
 
-(defn split-bytes [interval bytes]
+(defn convert-buf-seqs [x]
+  (postwalk
+    #(if (and (sequential? %) (instance? java.nio.ByteBuffer (first %)))
+       [(contiguous %)]
+       %)
+    x))
+
+(defn convert-result [x]
+  (-> x convert-buf-seqs convert-char-sequences))
+
+(defn partition-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
-    (apply concat (map #(take-bytes 1 (drop-bytes % buf-seq)) (range (byte-count buf-seq))))))
+    (apply concat
+      (map
+	#(take-bytes 1 (drop-bytes % buf-seq))
+	(range (byte-count buf-seq))))))
+
+(defn split-bytes [index bytes]
+  (let [bytes (dup-bytes bytes)]
+    [(take-bytes index bytes) (drop-bytes index bytes)]))
 
 (defn compare-result [expected result]
-  (is (= expected (convert-char-sequences (second result))))
+  (is (= expected (convert-result (second result))))
   (is (= true (first result)))
   (is (empty? (nth result 2))))
 
-(defn test-stream-roundtrip [frame vals]
-  (let [bytes (split-bytes 1 (encode frame vals))
+(defn test-stream-roundtrip [split-fn frame vals]
+  (let [bytes (split-fn (encode frame vals))
 	in (channel)
 	out (decode-channel frame in)]
     (doseq [b bytes]
       (enqueue in b))
-    (let [s (convert-char-sequences (channel-seq out))]
+    (let [s (convert-result (channel-seq out))]
       (if (= 1 (count s))
 	(is (= vals (first s)))
 	(is (= vals (apply str s)))))))
@@ -42,12 +63,13 @@
   (let [f (compile-frame f)
 	bytes (write-bytes f nil val)
 	result (read-bytes f (dup-bytes bytes))
-	split-result (read-bytes f (split-bytes 1 (dup-bytes bytes)))
-	]
-    (test-stream-roundtrip f val)
+	split-result (read-bytes f (partition-bytes 1 (dup-bytes bytes)))]
+    (test-stream-roundtrip #(partition-bytes 1 %) f val)
     (compare-result val result)
     (compare-result val split-result)
-    ))
+    (doseq [i (range 1 (byte-count bytes))]
+      (compare-result val (read-bytes f (apply concat (split-bytes i bytes))))
+      (test-stream-roundtrip #(split-bytes i %) f val))))
 
 (defn test-full-roundtrip [f buf val]
   (compare-result val (read-bytes f (dup-bytes buf)))
@@ -95,9 +117,24 @@
     (repeated :int32 :prefix (prefix :byte))
     (range 100))
   (test-roundtrip
+    (repeated :byte :prefix :int32)
+    (range 100))
+  (test-roundtrip
     (finite-frame (prefix :int16)
       (repeated :int32 :prefix :none))
-    (range 100)))
+    (range 100))
+  (test-roundtrip
+    [:byte (repeated :int32)]
+    [1 [2]]))
+
+(deftest test-finite-block
+  (test-roundtrip
+    [:byte :byte
+     (finite-block
+       (prefix :int16
+	 #(- % 4)
+	 #(+ % 4)))]
+    [1 1 (encode (repeated :int16) (range 5))]))
 
 (deftest test-complex-prefix
   (let [p (prefix [:byte :byte]

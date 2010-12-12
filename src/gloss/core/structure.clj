@@ -35,7 +35,9 @@
 		  [false
 		   (compose-callback
 		     x
-		     #(read-bytes (sequence-reader (conj result %1) (rest s)) %2))
+		     #(read-bytes
+			(sequence-reader (conj result %1) (rest s))
+			%2))
 		   b])))))))))
 
 (defn convert-sequence

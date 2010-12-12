@@ -95,7 +95,7 @@
 (defn- decode-byte-sequence [codec reader buf-seq]
   (loop [buf-seq buf-seq, vals [], reader reader]
     (if (empty? buf-seq)
-      [vals codec nil]
+      [vals reader nil]
       (let [[success x remainder] (read-bytes reader buf-seq)]
 	(if success
 	  (recur remainder (conj vals x) codec)
@@ -116,7 +116,7 @@
 	      (let [[s reader remainder] (decode-byte-sequence
 					   codec
 					   (:reader state)
-					   (concat (:bytes state) (to-buf-seq bytes)))]
+					   (concat (:bytes state) (to-buf-seq bytes)))] 
 		(if (closed? src)
 		  (enqueue-and-close dst (when-not (empty? s) s))
 		  (when-not (empty? s)
