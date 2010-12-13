@@ -64,6 +64,8 @@
 
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
+	bytes (encode f val)
+	val (convert-char-sequences (decode f bytes))
 	bytes (encode-all f [val val])
 	result (decode-all f bytes)
 	split-result (decode-all f (partition-bytes 1 (dup-bytes bytes)))]

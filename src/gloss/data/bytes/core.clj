@@ -35,7 +35,7 @@
       [(-> last-buf (.position 0) ^ByteBuffer (.limit last-pos) slice)])))
 
 (defn dup-bytes [buf-seq]
-  (map duplicate buf-seq))
+  (doall (map duplicate buf-seq)))
 
 (defn drop-bytes
   [n buf-seq]

@@ -9,7 +9,7 @@
 (ns gloss.core.codecs
   (:use
     [gloss.data bytes string primitives]
-    [gloss.core protocols structure]))
+    [gloss.core protocols structure formats]))
 
 ;;;
 
@@ -69,12 +69,12 @@
   (reify
     Reader
     (read-bytes [_ b]
-      [true b nil])
+      [true (dup-bytes b) nil])
     Writer
     (sizeof [_]
       nil)
     (write-bytes [_ _ b]
-      b)))
+      (-> b to-buf-seq dup-bytes))))
 
 ;;;
 
