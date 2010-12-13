@@ -113,10 +113,11 @@
 	      (if-not (closed? src)
 		(enqueue dst nil)
 		(enqueue-and-close dst nil))
-	      (let [[s reader remainder] (decode-byte-sequence
+	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+		    [s reader remainder] (decode-byte-sequence
 					   codec
 					   (:reader state)
-					   (concat (:bytes state) (to-buf-seq bytes)))] 
+					   (concat (:bytes state) bytes))] 
 		(if (closed? src)
 		  (enqueue-and-close dst (when-not (empty? s) s))
 		  (when-not (empty? s)

@@ -29,8 +29,18 @@
        %)
     x))
 
+(defn convert-string-sequence [x]
+  (if (and (sequential? x) (every? string? x))
+    (apply str x)
+    x))
+
 (defn convert-result [x]
-  (-> x convert-buf-seqs convert-char-sequences))
+  (-> x convert-buf-seqs convert-char-sequences convert-string-sequence))
+
+(defn is= [a b]
+  (is
+    (= (convert-string-sequence a) (convert-result b))
+    (str (prn-str a) (prn-str b))))
 
 (defn partition-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
@@ -43,36 +53,29 @@
   (let [bytes (dup-bytes bytes)]
     [(take-bytes index bytes) (drop-bytes index bytes)]))
 
-(defn compare-result [expected result]
-  (is (= expected (convert-result (second result))))
-  (is (= true (first result)))
-  (is (empty? (nth result 2))))
-
-(defn test-stream-roundtrip [split-fn frame vals]
-  (let [bytes (split-fn (encode frame vals))
+(defn test-stream-roundtrip [split-fn frame val]
+  (let [bytes (split-fn (encode-all frame [val val]))
 	in (channel)
 	out (decode-channel frame in)]
     (doseq [b bytes]
       (enqueue in b))
     (let [s (convert-result (channel-seq out))]
-      (if (= 1 (count s))
-	(is (= vals (first s)))
-	(is (= vals (apply str s)))))))
+      (is= [val val] s))))
 
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
-	bytes (write-bytes f nil val)
-	result (read-bytes f (dup-bytes bytes))
-	split-result (read-bytes f (partition-bytes 1 (dup-bytes bytes)))]
+	bytes (encode-all f [val val])
+	result (decode-all f bytes)
+	split-result (decode-all f (partition-bytes 1 (dup-bytes bytes)))]
     (test-stream-roundtrip #(partition-bytes 1 %) f val)
-    (compare-result val result)
-    (compare-result val split-result)
+    (is= [val val] result)
+    (is= [val val] split-result)
     (doseq [i (range 1 (byte-count bytes))]
-      (compare-result val (read-bytes f (apply concat (split-bytes i bytes))))
+      (is= [val val] (decode-all f (apply concat (split-bytes i bytes))))
       (test-stream-roundtrip #(split-bytes i %) f val))))
 
 (defn test-full-roundtrip [f buf val]
-  (compare-result val (read-bytes f (dup-bytes buf)))
+  (is= val (decode f (dup-bytes buf)))
   (is (= buf (write-bytes f nil val))))
 
 (deftest test-lists
@@ -103,7 +106,7 @@
 (deftest test-repeated
   (test-roundtrip
     (repeated :int32)
-    (range 100))
+    (range 10))
   (test-roundtrip
     (repeated [:byte :byte])
     (partition 2 (range 100)))
@@ -112,26 +115,26 @@
     (range 10))
   (test-roundtrip
     (repeated {:a :int32 :b :int32})
-    (repeat 100 {:a 1 :b 2}))
+    (repeat 10 {:a 1 :b 2}))
   (test-roundtrip
     (repeated :int32 :prefix (prefix :byte))
-    (range 100))
+    (range 10))
   (test-roundtrip
     (repeated :byte :prefix :int32)
-    (range 100))
+    (range 10))
   (test-roundtrip
     (finite-frame (prefix :int16)
       (repeated :int32 :prefix :none))
-    (range 100))
+    (range 10))
   (test-roundtrip
     [:byte (repeated :int32)]
     [1 [2]]))
 
 (deftest test-finite-block
   (test-roundtrip
-    [:byte :byte
+    [:byte :int16
      (finite-block
-       (prefix :int16
+       (prefix :int64
 	 #(- % 4)
 	 #(+ % 4)))]
     [1 1 (encode (repeated :int16) (range 5))]))
@@ -192,7 +195,8 @@
     (repeated (string-float :ascii :delimiters ["x"]))
     [(/ 3 2) 1.5 0.66666])
   (test-roundtrip
-    (repeated :int32 :prefix (prefix (string-integer :ascii :delimiters ["x"]) identity identity))
+    (repeated :int32
+      :prefix (prefix (string-integer :ascii :delimiters ["x"])))
     [1 2 3]))
 
 (deftest test-ordered-map
