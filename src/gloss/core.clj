@@ -35,6 +35,7 @@
   `(defcodec ^{:private true} ~name ~frame))
 
 (import-fn #'protocols/sizeof)
+(import-fn bytes/byte-count)
 
 ;;;
 
@@ -163,13 +164,13 @@
      second
      (fn [n] [\"hello\" n]))
 
-   For complex prefixes, 'to-integer' must take the value of the header and return the length
-   of the sequence that follows, and 'from-integer' must take the length of the sequence and
+   For complex prefixes, 'to-count' must take the value of the header and return the length
+   of the sequence that follows, and 'from-count' must take the length of the sequence and
    return the value of the prefix."
   ([primitive]
      (prefix primitive identity identity))
-  ([signature to-integer from-integer]
-     (codecs/prefix (compile-frame signature) to-integer from-integer)))
+  ([signature to-count from-count]
+     (codecs/prefix (compile-frame signature) to-count from-count)))
 
 (defn repeated
   "Describes a sequence of frames.  By default, the sequence is prefixed with a 32-bit integer

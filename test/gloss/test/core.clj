@@ -11,7 +11,7 @@
     [gloss core io]
     [gloss.core.formats :only (to-char-buffer)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
-    [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes byte-count take-contiguous-bytes)]
+    [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes take-contiguous-bytes)]
     [lamina core]
     [clojure test walk]))
 
