@@ -6,7 +6,8 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.core.formats
+(ns ^{:skip-wiki true}
+  gloss.core.formats
   (:import
     [java.nio
      Buffer

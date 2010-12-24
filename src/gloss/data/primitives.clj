@@ -6,7 +6,8 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.data.primitives
+(ns ^{:skip-wiki true}
+  gloss.data.primitives
   (:use
     [gloss.data bytes]
     [gloss.core protocols])

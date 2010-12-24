@@ -6,7 +6,8 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.core.structure
+(ns ^{:skip-wiki true}
+  gloss.core.structure
   (:use
     [clojure.walk]
     [gloss.core protocols]
@@ -96,7 +97,11 @@
 
 (defn compile-frame
   "Takes a frame, and returns a codec.  This function is idempotent; passing in a codec
-   is a safe operation."
+   is a safe operation.
+
+   Functions that transform the values after they are decoded and before they are encoded
+   can be specified, which allows the frame to only be an intermediate representation of
+   the final Clojure data structure."
   ([frame]
      (if (reader? frame)
        frame

@@ -86,7 +86,7 @@
 
    A string with :delimiters specified is terminated by one or more delimiters:
 
-   (string :utf-8 :delimiters [\"\r\n\" \"\n\"])"
+   (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])"
   [charset & {:as options}]
   (let [charset (name charset)]
     (cond
@@ -160,7 +160,7 @@
    But may also be a more complex frame:
 
    (prefix
-     [(string :utf-8 :delimiters [\"\0\"]) :int64]
+     [(string :utf-8 :delimiters [\"\\0\"]) :int64]
      second
      (fn [n] [\"hello\" n]))
 

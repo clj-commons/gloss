@@ -6,7 +6,8 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns gloss.core.codecs
+(ns ^{:skip-wiki true}
+  gloss.core.codecs
   (:use
     [gloss.data bytes string primitives]
     [gloss.core protocols structure formats]))
