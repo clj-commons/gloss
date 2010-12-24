@@ -112,23 +112,23 @@
 	    (if-not bytes
 	      (if-not (closed? src)
 		(enqueue dst nil)
-		(enqueue-and-close dst nil))
+		(close dst))
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
 		    [s reader remainder] (decode-byte-sequence
 					   codec
 					   (:reader state)
-					   (concat (:bytes state) bytes))] 
-		(if (closed? src)
-		  (enqueue-and-close dst (when-not (empty? s) s))
-		  (when-not (empty? s)
-		    (apply enqueue dst s)))
+					   (concat (:bytes state) bytes))]
+		(when-not (empty? s)
+		  (apply enqueue dst s))
+		(when (closed? src)
+		  (close dst))
 		{:reader reader :bytes remainder})))))
       (fn [x]
 	(when-not (closed? src)
 	  (restart x))))
     (splice dst nil-channel)))
 
-(defn decode-stream [codec ^InputStream stream]
+'(defn decode-stream [codec ^InputStream stream]
   (let [ch (channel)]
     (.start
       (Thread.
