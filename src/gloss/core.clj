@@ -35,7 +35,12 @@
   `(defcodec ^{:private true} ~name ~frame))
 
 (import-fn #'protocols/sizeof)
-(import-fn bytes/byte-count)
+
+(defn byte-count
+  "Returns the number of bytes in the value.  Compatible with any data structure that can
+   be transformed into a sequence of ByteBuffers."
+  [b]
+  (bytes/byte-count (to-buf-seq b)))
 
 ;;;
 
