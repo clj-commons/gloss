@@ -109,10 +109,10 @@
 	(run-pipeline src
 	  read-channel
 	  (fn [bytes]
-	    (if-not bytes
-	      (if-not (closed? src)
-		(enqueue dst nil)
+	    (if (empty? bytes)
+	      (when (closed? src)
 		(close dst))
+	      
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
 		    [s reader remainder] (decode-byte-sequence
 					   codec

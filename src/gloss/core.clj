@@ -58,7 +58,8 @@
     strip-delimiters?))
 
 (defn finite-block
-  "Defines a frame which is just a fixed-length byte seuqences."
+  "Defines a byte sequence which is either of fixed length or has a prefix which
+   describes its length."
   [prefix-or-len]
   (if (number? prefix-or-len)
     (bytes/finite-byte-codec prefix-or-len)
@@ -72,8 +73,8 @@
     (compile-frame frame)))
 
 (defn finite-frame
-  "Defines a frame which is either of finite length, or has a prefix
-   which describes its length."
+  "Defines a frame which is either of finite length, or has a prefix which describes
+   its length."
   [prefix-or-len frame]
   (bytes/wrap-finite-block
     (if (number? prefix-or-len)
