@@ -109,7 +109,7 @@
 	(run-pipeline src
 	  read-channel
 	  (fn [bytes]
-	    (if (empty? bytes)
+	    (if (nil? bytes)
 	      (when (closed? src)
 		(close dst))
 	      
