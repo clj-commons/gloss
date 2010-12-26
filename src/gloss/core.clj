@@ -102,7 +102,7 @@
       (:delimiters options)
       (bytes/delimited-codec
 	(->> (:delimiters options)
-	  (map #(if (string? %) (.getBytes % charset) %))
+	  (map #(if (string? %) (.getBytes ^String % charset) %))
 	  (map to-byte-buffer))
 	(string/string-codec charset))
 

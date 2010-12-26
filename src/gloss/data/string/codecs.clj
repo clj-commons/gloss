@@ -111,4 +111,6 @@
     (write-bytes [_ _ s]
       (when-not (instance? CharSequence s)
 	(throw (Exception. (str "Expected a CharSequence, but got " s " " (class s)))))
-      [(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))])))
+      (if (string? s)
+	[(ByteBuffer/wrap (.getBytes ^String s (name charset)))]
+	[(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))]))))

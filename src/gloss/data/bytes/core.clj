@@ -15,10 +15,10 @@
 
 ;;;
 
-(defn duplicate [^ByteBuffer buf]
+(defn ^ByteBuffer duplicate [^ByteBuffer buf]
   (-> buf .duplicate (.order (.order buf))))
 
-(defn slice [^ByteBuffer buf]
+(defn ^ByteBuffer slice [^ByteBuffer buf]
   (-> buf .slice (.order (.order buf))))
 
 (defn byte-count [buf-seq]
