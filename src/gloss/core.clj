@@ -84,7 +84,7 @@
 
 (defn string
   "Defines a frame which contains a string.  The charset must be a keyword,
-   such as :utf-8 or :ascii.  Available options are :length and :delimiters.
+   such as :utf-8 or :ascii.  Available options are :length, :delimiters, and :as-str.
 
    A string with :length specified is of finite size:
 
@@ -92,22 +92,31 @@
 
    A string with :delimiters specified is terminated by one or more delimiters:
 
-   (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])"
+   (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])
+
+   By default, this function decodes to a java.lang.CharSequence instead of an
+   actual string.  This is often sufficient, and more memory-efficient.  However,
+   if a real string is necessary, set :as-str to true."
   [charset & {:as options}]
   (let [charset (name charset)]
-    (cond
-      (:length options)
-      (string/finite-string-codec charset (:length options))
-
-      (:delimiters options)
-      (bytes/delimited-codec
-	(->> (:delimiters options)
-	  (map #(if (string? %) (.getBytes ^String % charset) %))
-	  (map to-byte-buffer))
+    (compile-frame
+      (cond
+	(:length options)
+	(string/finite-string-codec charset (:length options))
+	
+	(:delimiters options)
+	(bytes/delimited-codec
+	  (->> (:delimiters options)
+	    (map #(if (string? %) (.getBytes ^String % charset) %))
+	    (map to-byte-buffer))
+	  (string/string-codec charset))
+	
+	:else
 	(string/string-codec charset))
-
-      :else
-      (string/string-codec charset))))
+      identity
+      (if (or (:as-str options) false)
+	str
+	identity))))
 
 (defn string-integer
   [charset & {:as options}]
