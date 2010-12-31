@@ -95,8 +95,8 @@
    (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])
 
    By default, this function decodes to a java.lang.CharSequence instead of an
-   actual string.  This is often sufficient, and more memory-efficient.  However,
-   if a real string is necessary, set :as-str to true."
+   actual string.  This is more memory-efficient, and clojure.contrib.str operates
+   on CharSequences.  However, if a real string is necessary, set :as-str to true."
   [charset & {:as options}]
   (let [charset (name charset)]
     (compile-frame
