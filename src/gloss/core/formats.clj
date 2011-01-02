@@ -8,6 +8,8 @@
 
 (ns ^{:skip-wiki true}
   gloss.core.formats
+  (:use
+    [gloss.data.bytes.core])
   (:import
     [java.nio
      Buffer
@@ -21,10 +23,11 @@
   [x]
   (when x
     (cond
-      (and (sequential? x) (or (empty? x) (instance? ByteBuffer (first x)))) x
-      (= (class x) byte-array-class) [(ByteBuffer/wrap x)]
-      (instance? ByteBuffer x) [x]
-      :else (throw (Exception. (str "Cannot convert to buf-seq: " (with-out-str (prn x))))))))
+      (= (class x) byte-array-class)
+      (create-buf-seq (ByteBuffer/wrap x))
+
+      :else
+      (create-buf-seq x))))
 
 (defn to-byte-buffer
   "Converts the value to a Bytebuffer."

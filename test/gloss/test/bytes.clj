@@ -20,21 +20,21 @@
 	(cons (.get buf) (byte-seq buf))))))
 
 (deftest test-drop-bytes
-  (let [bufs (map to-byte-buffer (partition 5 (range 100)))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
     (dotimes [i 101]
-      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes i bufs)))))))
+      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes bufs i)))))))
 
 (deftest test-take-bytes
-  (let [bufs (map to-byte-buffer (partition 5 (range 100)))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
     (dotimes [i 101]
-      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes i bufs)))))))
+      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes bufs i)))))))
 
 (deftest test-take-contiguous-bytes
-  (let [bufs (map to-byte-buffer (partition 5 (range 100)))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
     (dotimes [i 101]
-      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes i bufs)))))))
+      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes bufs i)))))))
 
-'(defn- test-split [split-location skip-bytes source split]
+(defn- test-split [split-location skip-bytes source split]
   (let [s (mapcat byte-seq source)
 	split (map #(mapcat byte-seq %) (rest split))]
     (if (<= split-location (count s))
@@ -43,19 +43,19 @@
 
 '(deftest test-take-delimited-bytes
   ;;single-byte delimiters
-  (let [bufs (map to-byte-buffer (partition 3 (range 12)))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 3 (range 12))))]
     (dotimes [i 12]
       (let [delimiters [(to-byte-buffer [i])]]
 	(test-split i 1 bufs (take-delimited-bytes bufs delimiters true))
 	(test-split (inc i) 0 bufs (take-delimited-bytes bufs delimiters false)))))
 
   ;;non-existent delimiters
-  (let [bufs (map to-byte-buffer (partition 4 (range 100)))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 4 (range 100))))]
     (test-split 101 0 bufs (take-delimited-bytes bufs [(to-byte-buffer [1 3])] false))
     (test-split 101 0 bufs (take-delimited-bytes bufs [(to-byte-buffer [101])] false)))
 
   ;;multi-byte delimiters
-  (let [bufs (map to-byte-buffer (partition 3 (range 12)))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 3 (range 12))))]
     (dotimes [i 11]
       (let [delimiters [(to-byte-buffer [i]) (to-byte-buffer [i (inc i)])]]
 	(test-split (+ i 2) 0 bufs (take-delimited-bytes bufs delimiters false))

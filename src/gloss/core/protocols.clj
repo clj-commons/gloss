@@ -8,8 +8,11 @@
 
 (ns ^{:skip-wiki true}
   gloss.core.protocols
-  (:use [gloss.core formats])
-  (:import [java.nio Buffer ByteBuffer]))
+  (:use
+    [gloss.core formats])
+  (:import
+    [java.nio Buffer ByteBuffer]
+    [gloss.data.bytes.core SingleBufferSequence]))
 
 ;;;
 
@@ -30,7 +33,7 @@
      (do ~@body)
      (let [~buf (ByteBuffer/allocate ~size)]
        (do ~@body)
-       [(.rewind ^Buffer ~buf)])))
+       (SingleBufferSequence. (.rewind ^Buffer ~buf) ~size))))
 
 ;;;
 
@@ -38,7 +41,7 @@
   (loop [result [], buf-seq buf-seq]
     (if (empty? buf-seq)
       result
-      (let [[success x xs] (read-bytes reader buf-seq)]
+      (let [[success x xs] (read-bytes reader (to-buf-seq buf-seq))]
 	(if success
 	  (recur (conj result x) xs)
 	  result)))))
@@ -50,7 +53,7 @@
       (let [[success x bytes] (read-bytes codec buf-seq)]
 	(if success
 	  (callback x bytes)
-	  [false (compose-callback x callback) bytes])))
+	  [false (compose-callback x callback) (to-buf-seq bytes)])))
     Writer
     (sizeof [_]
       (sizeof codec))
@@ -70,7 +73,7 @@
 		(assert (empty? remainder))
 		[true v bytes]))
 	    x)
-	  [false (compose-readers x b) bytes])))
+	  [false (compose-readers x b) (to-buf-seq bytes)])))
     Writer
     (sizeof [_]
       nil)
@@ -79,7 +82,7 @@
 
 (defn take-all [codec]
   (fn [buf-seq remainder]
-    (loop [bytes buf-seq, vals []]
+    (loop [bytes (to-buf-seq buf-seq), vals []]
       (if (empty? bytes)
 	[true vals remainder]
 	(let [[success v b] (read-bytes codec bytes)]

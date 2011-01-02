@@ -21,84 +21,231 @@
 (defn ^ByteBuffer slice [^ByteBuffer buf]
   (-> buf .slice (.order (.order buf))))
 
+(defn ^ByteBuffer rewind [^ByteBuffer buf]
+  (.rewind buf))
+
+(defn ^ByteBuffer position
+  ([^ByteBuffer buf]
+     (.position buf))
+  ([^ByteBuffer buf n]
+     (.position buf n)))
+
+(defn ^ByteBuffer limit [^ByteBuffer buf n]
+  (.limit buf n))
+
+(declare create-buf-seq)
+
+(defprotocol BufferSequence
+  (byte-count- [this])
+  (write-to-buf [this ^ByteBuffer buf])
+  (rewind-bytes [this])
+  (dup-bytes- [this])
+  (drop-bytes- [this n])
+  (take-bytes- [this n])
+  (take-contiguous-bytes- [this n])
+  (concat-bytes- [this bytes]))
+
 (defn byte-count [buf-seq]
-  (apply + (map #(.remaining ^Buffer %) buf-seq)))
-
-(defn write-to-buf [buf-seq buf]
-  (doseq [b buf-seq]
-    (.put ^ByteBuffer buf ^ByteBuffer b)))
-
-(defn rewind-bytes [buf-seq]
-  (concat
-    (map #(.rewind ^ByteBuffer %) (drop-last buf-seq))
-    (let [last-buf ^ByteBuffer (last buf-seq)
-	  last-pos (.position last-buf)]
-      [(-> last-buf (.position 0) ^ByteBuffer (.limit last-pos) slice)])))
+  (if buf-seq
+    (byte-count- buf-seq)
+    0))
 
 (defn dup-bytes [buf-seq]
-  (doall (map duplicate buf-seq)))
+  (when buf-seq
+    (dup-bytes- buf-seq)))
 
-(defn drop-bytes
-  [n buf-seq]
+(defn drop-bytes [buf-seq n]
+  (when buf-seq
+    (drop-bytes- buf-seq n)))
+
+(defn take-bytes [buf-seq n]
+  (when buf-seq
+    (take-bytes- buf-seq n)))
+
+(defn take-contiguous-bytes [buf-seq n]
+  (when buf-seq
+    (take-contiguous-bytes- buf-seq n)))
+
+(defn concat-bytes [buf-seq bytes]
+  (if buf-seq
+    (concat-bytes- buf-seq bytes)
+    (create-buf-seq bytes)))
+
+;;;
+
+(deftype MultiBufferSequence [buf-seq byte-count]
+  clojure.lang.Sequential
+  clojure.lang.Seqable
+  (seq [_]
+    (seq buf-seq))
+
+  clojure.lang.ISeq
+  (first [this]
+    (first buf-seq))
+
+  (next [this]
+    (create-buf-seq (next (seq this))))
+
+  (more [this]
+    (next this))
+
+  (cons [this bufs]
+    (create-buf-seq (concat bufs buf-seq)))
+  
+  BufferSequence
+  (byte-count- [_]
+    byte-count)
+
+  (write-to-buf [_ buf]
+    (doseq [b buf-seq]
+      (.put ^ByteBuffer buf ^ByteBuffer b)))
+
+  (rewind-bytes [this]
+    (doseq [b buf-seq]
+      (rewind b))
+    this)
+
+  (dup-bytes- [_]
+    (MultiBufferSequence. (doall (map duplicate buf-seq)) byte-count))
+
+  (drop-bytes- [this n]
+    (cond
+      (not (pos? n))
+      this
+      
+      (>= n byte-count)
+      nil
+      
+      :else
+      (create-buf-seq
+	(loop [remaining n, s buf-seq]
+	  (when-not (empty? s)
+	    (let [buf ^ByteBuffer (first s)]
+	      (cond
+		(= remaining (.remaining buf))
+		(rest s)
+		
+		(< remaining (.remaining buf))
+		(cons
+		  (-> buf duplicate (position (+ remaining (position buf))) slice)
+		  (rest s))
+		
+		:else
+		(recur (- remaining (.remaining buf)) (rest s)))))))))
+
+  (take-bytes- [this n]
+    (cond
+      (not (pos? n))
+      nil
+      
+      (>= n byte-count)
+      this
+      
+      :else
+      (when-let [first-buf ^ByteBuffer (first buf-seq)]
+	(create-buf-seq
+	  (if (> (.remaining first-buf) n)
+	    [(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)]
+	    (when (<= n byte-count)
+	      (loop [remaining n, bytes buf-seq, accumulator []]
+		(if (pos? remaining)
+		  (let [buf ^ByteBuffer (first bytes)]
+		    (if (>= remaining (.remaining buf))
+		      (recur (- remaining (.remaining buf)) (rest bytes) (conj accumulator buf))
+		      (conj accumulator (-> buf duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) slice))))
+		  accumulator))))))))
+
+  (take-contiguous-bytes- [_ n]
+    (when-not (< byte-count n)
+      (let [buf-seq (map duplicate buf-seq)
+	    first-buf ^ByteBuffer (first buf-seq)]
+	(if (> (.remaining first-buf) n)
+	  (-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
+	  (when (and (pos? n) (<= n byte-count))
+	    (let [ary (byte-array n)]
+	      (loop [offset 0, bytes buf-seq]
+		(if (>= offset n)
+		  (ByteBuffer/wrap ary)
+		  (let [buf ^ByteBuffer (first bytes)
+			num-bytes (min (.remaining buf) (- n offset))]
+		    (-> buf duplicate (.get ary offset num-bytes))
+		    (recur (+ offset num-bytes) (rest bytes)))))))))))
+
+  (concat-bytes- [_ bufs]
+    (create-buf-seq (concat buf-seq bufs))))
+
+(deftype SingleBufferSequence [^ByteBuffer buffer byte-count]
+  clojure.lang.Sequential
+  clojure.lang.Seqable
+  (seq [_]
+    (seq [buffer]))
+  clojure.lang.ISeq
+  (first [this]
+    buffer)
+  (next [_]
+    nil)
+  (more [_]
+    nil)
+  (cons [_ bytes]
+    (create-buf-seq (concat bytes [buffer])))
+  BufferSequence
+  (byte-count- [_]
+    byte-count)
+  (write-to-buf [_ buf]
+    (.put buf buffer))
+  (rewind-bytes [this]
+    (.rewind buffer)
+    this)
+  (dup-bytes- [_]
+    (SingleBufferSequence. (.duplicate buffer) byte-count))
+  (drop-bytes- [this n]
+    (cond
+      (not (pos? n))
+      this
+      
+      (< n byte-count)
+      (SingleBufferSequence. (-> buffer duplicate (position n) slice) (- byte-count n))
+
+      :else
+      nil))
+  (take-bytes- [this n]
+    (cond
+      (not (pos? n))
+      nil
+      
+      (<= n byte-count)
+      (SingleBufferSequence. (take-contiguous-bytes this n) n)
+
+      :else
+      nil))
+  (take-contiguous-bytes- [this n]
+    (cond
+      (not (pos? n))
+      nil
+
+      (<= n byte-count)
+      (-> buffer duplicate (limit n) slice)
+
+      :else
+      nil))
+  (concat-bytes- [_ bufs]
+    (create-buf-seq (cons buffer bufs))))
+
+(defn create-buf-seq [bytes]
   (cond
-    (not (pos? n))
-    buf-seq
+    (or
+      (instance? SingleBufferSequence bytes)
+      (instance? MultiBufferSequence bytes))
+    bytes
+    
+    (instance? ByteBuffer bytes)
+    (create-buf-seq [bytes])
 
-    (>= n (byte-count buf-seq))
+    (empty? bytes)
     nil
+    
+    (= 1 (count bytes))
+    (SingleBufferSequence. (first bytes) (.remaining ^Buffer (first bytes)))
 
     :else
-    (loop [remaining n, s buf-seq]
-      (when-not (empty? s)
-	(let [buf ^ByteBuffer (first s)]
-	  (cond
-	    (= remaining (.remaining buf))
-	    (rest s)
-
-	    (< remaining (.remaining buf))
-	    (cons
-	      (-> buf duplicate ^ByteBuffer (.position (+ remaining (.position buf))) slice)
-	      (rest s))
-
-	    :else
-	    (recur (- remaining (.remaining buf)) (rest s))))))))
-
-(defn take-bytes
-  [n buf-seq]
-  (cond
-    (not (pos? n))
-    nil
-
-    (>= n (byte-count buf-seq))
-    buf-seq
-
-    :else
-    (when-let [first-buf ^ByteBuffer (first buf-seq)]
-      (if (> (.remaining first-buf) n)
-	[(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)]
-	(when (<= n (byte-count buf-seq))
-	  (loop [remaining n, bytes buf-seq, accumulator []]
-	    (if (pos? remaining)
-	      (let [buf ^ByteBuffer (first bytes)]
-		(if (>= remaining (.remaining buf))
-		  (recur (- remaining (.remaining buf)) (rest bytes) (conj accumulator buf))
-		  (conj accumulator (-> buf duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) slice))))
-	      accumulator)))))))
-
-(defn take-contiguous-bytes
-  "Returns a single ByteBuffer which contains the first 'n' bytes of the buffer-sequence."
-  [n buf-seq]
-  (when-not (or (empty? buf-seq) (< (byte-count buf-seq) n))
-    (let [buf-seq (dup-bytes buf-seq)
-	  first-buf ^ByteBuffer (first buf-seq)]
-      (if (> (.remaining first-buf) n)
-	(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
-	(when (and (pos? n) (<= n (byte-count buf-seq)))
-	  (let [ary (byte-array n)]
-	    (loop [offset 0, bytes buf-seq]
-	      (if (>= offset n)
-		(ByteBuffer/wrap ary)
-		(let [buf ^ByteBuffer (first bytes)
-		      num-bytes (min (.remaining buf) (- n offset))]
-		  (-> buf duplicate (.get ary offset num-bytes))
-		  (recur (+ offset num-bytes) (rest bytes)))))))))))
+    (MultiBufferSequence. bytes (apply + (map #(.remaining ^Buffer %) bytes)))))

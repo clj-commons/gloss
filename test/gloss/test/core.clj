@@ -44,14 +44,15 @@
 
 (defn partition-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
-    (apply concat
-      (map
-	#(take-bytes 1 (drop-bytes % buf-seq))
-	(range (byte-count buf-seq))))))
+    (to-buf-seq
+      (apply concat
+	(map
+	  #(take-bytes (drop-bytes buf-seq %) 1)
+	  (range (byte-count buf-seq)))))))
 
 (defn split-bytes [index bytes]
-  (let [bytes (dup-bytes bytes)]
-    [(take-bytes index bytes) (drop-bytes index bytes)]))
+  (let [bytes (-> bytes to-buf-seq dup-bytes)]
+    [(take-bytes bytes index) (drop-bytes bytes index)]))
 
 (defn test-stream-roundtrip [split-fn frame val]
   (let [bytes (split-fn (encode-all frame [val val]))
@@ -68,7 +69,7 @@
 	val (convert-char-sequences (decode f bytes))
 	bytes (encode-all f [val val])
 	result (decode-all f bytes)
-	split-result (decode-all f (partition-bytes 1 (dup-bytes bytes)))]
+	split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all f))]
     (test-stream-roundtrip #(partition-bytes 1 %) f val)
     (is= [val val] result)
     (is= [val val] split-result)
@@ -77,7 +78,7 @@
       (test-stream-roundtrip #(split-bytes i %) f val))))
 
 (defn test-full-roundtrip [f buf val]
-  (is= val (decode f (dup-bytes buf)))
+  (is= val (decode f (-> buf to-buf-seq dup-bytes)))
   (is (= buf (write-bytes f nil val))))
 
 (deftest test-lists

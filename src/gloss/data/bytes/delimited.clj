@@ -21,35 +21,30 @@
   (let [buf ^ByteBuffer (first buf-seq)]
     (.get buf (.position buf))))
 
-(defn next-bytes [buf-seq]
-  (let [buf ^ByteBuffer (first buf-seq)
-	buf (.position buf (inc (.position buf)))]
-    (if (.hasRemaining buf)
-      buf-seq
-      (rest buf-seq))))
-
 (defn match-delimiters [delimiters buf-seq]
-  (some
-    (fn [^ByteBuffer delimiter]
-      (and
-	(= (.get delimiter 0) (first-byte buf-seq))
-	(or
-	  (= 1 (.remaining delimiter))
-	  (= delimiter (take-contiguous-bytes (.remaining delimiter) buf-seq)))
-	delimiter))
-    (dup-bytes delimiters)))
+  (loop [delimiters delimiters]
+    (when-not (empty? delimiters)
+      (let [delimiter ^ByteBuffer (first delimiters)]
+	(if (and
+	      (= (.get delimiter 0) (first-byte buf-seq))
+	      (or
+		(= 1 (.remaining delimiter))
+		(= delimiter (take-contiguous-bytes buf-seq (.remaining delimiter)))))
+	  delimiter
+	  (recur (rest delimiters)))))))
 
 ;;naive solution - this assumes small and dissimilar delimiters
 (defn take-delimited-bytes
   "Returns the buffer-sequence as two buffer-sequences, split around the first found
    instance of a delimiter."
   ([buf-seq delimiters]
-     (take-delimited-bytes delimiters bytes true))
+     (take-delimited-bytes buf-seq delimiters true))
   ([buf-seq delimiters strip-delimiters?]
      (let [delimiters (->> delimiters
-			dup-bytes
+			(map #(.duplicate ^ByteBuffer %))
 			(sort #(compare (.remaining ^ByteBuffer %1) (.remaining ^ByteBuffer %2)))
-			reverse)]
+			reverse)
+	   buf-seq (to-buf-seq buf-seq)]
        (loop [bytes (dup-bytes buf-seq)]
 	 (if (empty? bytes)
 	   [false nil buf-seq]
@@ -57,22 +52,23 @@
 	     (let [delimiter-count (-> delimiter .rewind .remaining)
 		   location (- (byte-count buf-seq) (byte-count bytes))]
 	       [true
-		(take-bytes (+ location (if strip-delimiters? 0 delimiter-count)) buf-seq)
-		(drop-bytes (+ location delimiter-count) buf-seq)])
-	     (recur (next-bytes bytes))))))))
+		(take-bytes buf-seq (+ location (if strip-delimiters? 0 delimiter-count)))
+		(drop-bytes buf-seq (+ location delimiter-count))])
+	     (recur (drop-bytes bytes 1))))))))
 
 (defn delimited-bytes-codec
   ([delimiters strip-delimiters?]
      (delimited-bytes-codec nil delimiters strip-delimiters?))
   ([scanned delimiters strip-delimiters?]
-     (let [delimiters (dup-bytes delimiters)
+     (let [delimiters (map duplicate delimiters)
 	   max-delimiter-size (apply max
 				(map
 				  #(.remaining ^ByteBuffer %)
 				  delimiters))
+	   scanned (create-buf-seq scanned)
 	   split-index (- (byte-count scanned) (dec max-delimiter-size))
-	   prefix (drop-bytes split-index scanned)
-	   scanned (take-bytes split-index scanned)]
+	   prefix (drop-bytes scanned split-index)
+	   scanned (take-bytes scanned split-index)]
        (reify
 	 Reader
 	 (read-bytes [this b]
@@ -88,11 +84,11 @@
 
 (defn delimited-codec
   [delimiters codec]
-  (let [delimiters (dup-bytes delimiters)
+  (let [delimiters (map duplicate delimiters)
 	delimited-codec (compose-callback
 			  (delimited-bytes-codec delimiters true)
 			  (fn [bytes remainder]
-			    (let [[success v remainder*] (read-bytes codec bytes)]
+			    (let [[success v remainder*] (read-bytes codec (to-buf-seq bytes))]
 			      (assert success)
 			      (assert (empty? remainder*))
 			      [true v remainder])))]
@@ -113,7 +109,7 @@
 
 (defn wrap-delimited-sequence
   [delimiters codec]
-  (let [delimiters (dup-bytes delimiters)
+  (let [delimiters (map duplicate delimiters)
 	suffix (first delimiters)
 	sizeof-delimiter (.remaining ^Buffer suffix)
 	read-codec (compose-callback

@@ -30,20 +30,26 @@
   `(reify
      Reader
      (read-bytes [this# b#]
-       (if-let [first-buf# (first b#)]
-	 (let [remaining# (.remaining ^Buffer first-buf#)]
+       (if (< (byte-count b#) ~size)
+	 [false this# b#]
+	 (let [first-buf# (first b#)
+	       remaining# (.remaining ^Buffer first-buf#)]
 	   (cond
 	     (= ~size remaining#)
-	     [true (~accessor ^ByteBuffer (first b#)) (rest b#)]
+	     [true
+	      (~accessor ^ByteBuffer first-buf#)
+	      (rest b#)]
 	     
 	     (< ~size remaining#)
-	     [true (~accessor ^ByteBuffer (first b#)) b#]
+	     [true
+	      (~accessor ^ByteBuffer first-buf#)
+	      (-> b# rewind-bytes (drop-bytes ~size))]
 	     
 	     :else
-	     (if-let [buf# (take-contiguous-bytes ~size b#)]
-	       [true (~accessor ^ByteBuffer buf#) (drop-bytes ~size b#)]
-	       [false this# b#])))
-	 [false this# b#]))
+	     (let [buf# (take-contiguous-bytes b# ~size)]
+	       [true
+		(~accessor ^ByteBuffer buf#)
+		(drop-bytes b# ~size)])))))
      Writer
      (sizeof [_]
        ~size)

@@ -34,15 +34,15 @@
 	    (cond
 	      
 	      (.isOverflow result)
-	      [char-buf bytes]
+	      [char-buf (to-buf-seq bytes)]
 	      
 	      (and (.isUnderflow result) (pos? (.remaining first-buf)))
 	      (if (= 1 (count bytes))
-		[char-buf bytes]
+		[char-buf (to-buf-seq bytes)]
 		(recur
 		  (cons
-		    (take-contiguous-bytes (inc (byte-count (take 1 bytes))) bytes)
-		    (drop-bytes 1 (rest bytes)))))
+		    (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
+		    (drop-bytes (rest bytes) 1))))
 	      
 	      :else
 	      (recur (rest bytes)))))))))
@@ -90,8 +90,8 @@
 	      [(rewind-chars chars) bytes]
 	      (recur chars
 		(cons
-		  (take-contiguous-bytes (inc (byte-count (take 1 bytes))) bytes)
-		  (drop-bytes 1 (rest bytes)))))
+		  (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
+		  (drop-bytes (rest bytes) 1))))
 
 	    :else
 	    (recur chars (rest bytes))))))))
@@ -102,7 +102,7 @@
     (read-bytes [this buf-seq]
       (let [decoder (create-decoder charset)
 	    [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
-	(if (zero? (byte-count chars))
+	(if (empty? chars)
 	  [false this buf-seq]
 	  [true (create-char-sequence chars) bytes])))
     Writer

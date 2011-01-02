@@ -30,8 +30,8 @@
 (defn contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
   [buf-seq]
-  (when buf-seq
-    (bytes/take-contiguous-bytes (bytes/byte-count buf-seq) buf-seq)))
+  (when-let [buf-seq (to-buf-seq buf-seq)]
+    (bytes/take-contiguous-bytes buf-seq (bytes/byte-count buf-seq))))
 
 ;;;
 
@@ -117,12 +117,12 @@
 		    [s reader remainder] (decode-byte-sequence
 					   codec
 					   (:reader state)
-					   (concat (:bytes state) bytes))]
+					   (bytes/concat-bytes (:bytes state) bytes))]
 		(when-not (empty? s)
 		  (apply enqueue dst s))
 		(when (closed? src)
 		  (close dst))
-		{:reader reader :bytes remainder})))))
+		{:reader reader :bytes (to-buf-seq remainder)})))))
       (fn [x]
 	(when-not (closed? src)
 	  (restart x))))

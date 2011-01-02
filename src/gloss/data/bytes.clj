@@ -15,18 +15,22 @@
     [gloss.data.bytes.delimited :as delimited]
     [gloss.data.bytes.core :as core]))
 
-
-(import-fn core/byte-count)
-(import-fn core/take-bytes)
-(import-fn core/drop-bytes)
-(import-fn core/take-contiguous-bytes)
-(import-fn core/rewind-bytes)
-(import-fn core/dup-bytes)
+(import-fn core/create-buf-seq)
 (import-fn core/duplicate)
+
+(import-fn #'core/byte-count)
+(import-fn #'core/dup-bytes)
+(import-fn #'core/take-bytes)
+(import-fn #'core/drop-bytes)
+(import-fn #'core/take-contiguous-bytes)
+(import-fn #'core/rewind-bytes)
+(import-fn #'core/duplicate)
+(import-fn #'core/concat-bytes)
 
 (import-fn delimited/delimited-codec)
 (import-fn delimited/wrap-delimited-sequence)
 (import-fn delimited/delimited-bytes-codec)
+(import-fn delimited/take-delimited-bytes)
 
 (defn finite-byte-codec
   [len]
@@ -35,7 +39,7 @@
     (read-bytes [this b]
       (if (< (byte-count b) len)
 	[false this b]
-	[true (take-bytes len b) (drop-bytes len b)]))
+	[true (take-bytes b len) (drop-bytes b len)]))
     Writer
     (sizeof [_]
       len)
@@ -62,7 +66,7 @@
       (sizeof [_]
 	nil)
       (write-bytes [_ buf v]
-	(let [buf-seq (write-bytes codec nil v)]
+	(let [buf-seq (core/create-buf-seq (write-bytes codec nil v))]
 	  (concat
 	   (write-bytes prefix-codec nil (byte-count buf-seq))
 	   buf-seq))))))

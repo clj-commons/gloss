@@ -96,7 +96,9 @@
 
    By default, this function decodes to a java.lang.CharSequence instead of an
    actual string.  This is more memory-efficient, and clojure.contrib.str operates
-   on CharSequences.  However, if a real string is necessary, set :as-str to true."
+   on CharSequences.  However, if a real string is necessary, set :as-str to true:
+
+   (string :utf-8, :length 3, :as-str true)"
   [charset & {:as options}]
   (let [charset (name charset)]
     (compile-frame
