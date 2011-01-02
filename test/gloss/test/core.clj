@@ -68,10 +68,12 @@
 	val (convert-char-sequences (decode f bytes))
 	bytes (encode-all f [val val])
 	result (decode-all f bytes)
+	contiguous-result (decode-all f (contiguous bytes))
 	split-result (decode-all f (partition-bytes 1 (dup-bytes bytes)))]
     (test-stream-roundtrip #(partition-bytes 1 %) f val)
     (is= [val val] result)
     (is= [val val] split-result)
+    (is= [val val] contiguous-result)
     (doseq [i (range 1 (byte-count bytes))]
       (is= [val val] (decode-all f (apply concat (split-bytes i bytes))))
       (test-stream-roundtrip #(split-bytes i %) f val))))
