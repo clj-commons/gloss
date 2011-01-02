@@ -23,22 +23,24 @@
 (defn- sequence-reader
   [result readers]
   (reify Reader
-    (read-bytes [_ b]
+    (read-bytes [_ b bounded?]
       (loop [b b, s readers, result result]
 	(if (empty? s)
 	  [true result b]
 	  (let [[reader? x] (first s)]
 	    (if-not reader?
 	      (recur b (rest s) (conj result x))
-	      (let [[success x b] (read-bytes x b)]
+	      (let [[success x b] (read-bytes x b false)] ;;TODO: it's not always false
 		(if success
 		  (recur b (rest s) (conj result x))
 		  [false
 		   (compose-callback
 		     x
-		     #(read-bytes
-			(sequence-reader (conj result %1) (rest s))
-			%2))
+		     (fn [v b _]
+		       (read-bytes
+			 (sequence-reader (conj result v) (rest s))
+			 b
+			 false))) ;;TODO: sometimes not false?
 		   b])))))))))
 
 (defn convert-sequence
@@ -50,10 +52,10 @@
 	reader (sequence-reader [] s)]
      (reify
       Reader
-      (read-bytes [this b]
-	(if (and sizeof (< (byte-count b) sizeof))
+      (read-bytes [this b bounded?]
+	(if (and (not bounded?) sizeof (< (byte-count b) sizeof))
 	  [false this b]
-	  (read-bytes reader b)))
+	  (read-bytes reader b bounded?)))
       Writer
       (sizeof [_] sizeof)
       (write-bytes [_ buf vs]
@@ -75,12 +77,12 @@
 	codec (convert-sequence vs)
 	read-codec (compose-callback 
 		     codec
-		     (fn [x b]
+		     (fn [x b _]
 		       [true (zipmap ks x) b]))]
     (reify
       Reader
-      (read-bytes [_ b]
-	(read-bytes read-codec b))
+      (read-bytes [_ b bounded?]
+	(read-bytes read-codec b bounded?))
       Writer
       (sizeof [_]
 	(sizeof codec))
@@ -112,12 +114,12 @@
      (let [codec (compile-frame frame)
 	   read-codec (compose-callback
 			codec
-			(fn [x b]
+			(fn [x b _]
 			  [true (post-decoder x) b]))]
        (reify
 	 Reader
-	 (read-bytes [_ b]
-	   (read-bytes read-codec b))
+	 (read-bytes [_ b bounded?]
+	   (read-bytes read-codec b bounded?))
 	 Writer
 	 (sizeof [_]
 	   (sizeof codec))

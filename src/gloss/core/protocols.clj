@@ -17,7 +17,7 @@
 ;;;
 
 (defprotocol Reader
-  (read-bytes [this buf-seq]))
+  (read-bytes [this buf-seq bounded?]))
 
 (defprotocol Writer
   (sizeof [this])
@@ -41,7 +41,7 @@
   (loop [result [], buf-seq buf-seq]
     (if (empty? buf-seq)
       result
-      (let [[success x xs] (read-bytes reader (to-buf-seq buf-seq))]
+      (let [[success x xs] (read-bytes reader (to-buf-seq buf-seq) false)]
 	(if success
 	  (recur (conj result x) xs)
 	  result)))))
@@ -49,10 +49,10 @@
 (defn compose-callback [codec callback]
   (reify
     Reader
-    (read-bytes [this buf-seq]
-      (let [[success x bytes] (read-bytes codec buf-seq)]
+    (read-bytes [this buf-seq bounded?]
+      (let [[success x bytes] (read-bytes codec buf-seq bounded?)]
 	(if success
-	  (callback x bytes)
+	  (callback x bytes bounded?)
 	  [false (compose-callback x callback) (to-buf-seq bytes)])))
     Writer
     (sizeof [_]
@@ -63,16 +63,17 @@
 (defn compose-readers [a b]
   (reify
     Reader
-    (read-bytes [this buf-seq]
-      (let [[success x bytes] (read-bytes a buf-seq)]
+    (read-bytes [this buf-seq bounded?]
+      (let [[success x bytes] (read-bytes a buf-seq bounded?)]
 	(if success
 	  (read-bytes
 	    (compose-callback
 	      b
-	      (fn [v remainder]
+	      (fn [v remainder _]
 		(assert (empty? remainder))
 		[true v bytes]))
-	    x)
+	    x
+	    bounded?)
 	  [false (compose-readers x b) (to-buf-seq bytes)])))
     Writer
     (sizeof [_]
@@ -81,11 +82,11 @@
       (throw (Exception. "write-bytes not supported")))))
 
 (defn take-all [codec]
-  (fn [buf-seq remainder]
+  (fn [buf-seq remainder _]
     (loop [bytes (to-buf-seq buf-seq), vals []]
       (if (empty? bytes)
 	[true vals remainder]
-	(let [[success v b] (read-bytes codec bytes)]
+	(let [[success v b] (read-bytes codec bytes false)]
 	  (when-not success
 	    (throw (Exception. "Cannot evenly divide bytes into sequence of frames.")))
 	  (recur b (conj vals v)))))))

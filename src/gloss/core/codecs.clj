@@ -17,13 +17,13 @@
 (defn header [codec header->body body->header]
   (let [read-codec (compose-callback
 		     codec
-		     (fn [v b]
+		     (fn [v b bounded?]
 		       (let [body (header->body v)]
-			 (read-bytes body b))))]
+			 (read-bytes body b bounded?))))]
     (reify
       Reader
-      (read-bytes [_ buf-seq]
-	(read-bytes read-codec buf-seq))
+      (read-bytes [_ buf-seq bounded?]
+	(read-bytes read-codec buf-seq bounded?))
       Writer
       (sizeof [_]
 	nil)
@@ -42,12 +42,12 @@
   [codec to-integer from-integer]
   (let [read-codec (compose-callback
 		     codec
-		     (fn [x b]
+		     (fn [x b _]
 		       [true (to-integer x) b]))]
     (reify
       Reader
-      (read-bytes [_ b]
-	(read-bytes read-codec b))
+      (read-bytes [_ b bounded?]
+	(read-bytes read-codec b bounded?))
       Writer
       (sizeof [_]
 	(sizeof codec))
@@ -58,7 +58,7 @@
   [len]
   (reify
     Reader
-    (read-bytes [_ b]
+    (read-bytes [_ b _]
       [true len b])
     Writer
     (sizeof [_]
@@ -69,7 +69,7 @@
 (def identity-codec
   (reify
     Reader
-    (read-bytes [_ b]
+    (read-bytes [_ b _]
       [true (dup-bytes b) nil])
     Writer
     (sizeof [_]
@@ -88,8 +88,8 @@
 (defn- prefixed-sequence-reader [codec reader len vals]
   (reify
     Reader
-    (read-bytes [this buf-seq]
-      (if (insufficient-bytes? codec buf-seq len vals)
+    (read-bytes [this buf-seq bounded?]
+      (if (and (not bounded?) (insufficient-bytes? codec buf-seq len vals))
 	[false this buf-seq]
 	(read-prefixed-sequence codec reader buf-seq len vals)))))
 
@@ -97,7 +97,7 @@
   (loop [buf-seq buf-seq, vals vals, reader reader]
     (if (= (count vals) len)
       [true vals buf-seq]
-      (let [[success x b] (read-bytes reader buf-seq)]
+      (let [[success x b] (read-bytes reader buf-seq false)] ;;TODO: not always false
 	(if success
 	  (recur b (conj vals x) codec)
 	  [false (prefixed-sequence-reader codec x len vals) b])))))
@@ -106,7 +106,7 @@
   [prefix-codec codec]
   (let [read-codec (compose-callback
 		     (compile-frame prefix-codec)
-		     (fn [len b]
+		     (fn [len b _]
 		       (cond
 			 (zero? len)
 			 [true nil b]
@@ -118,8 +118,8 @@
 			 (read-prefixed-sequence codec codec b len []))))]
     (reify
       Reader
-      (read-bytes [_ b]
-	(read-bytes read-codec b))
+      (read-bytes [_ b bounded?]
+	(read-bytes read-codec b bounded?))
       Writer
       (sizeof [_]
 	nil)
@@ -159,8 +159,8 @@
 	codec (primitive-codecs primitive-type)]
     (reify
       Reader
-      (read-bytes [this b]
-	(let [[success x b] (read-bytes codec b)]
+      (read-bytes [this b bounded?]
+	(let [[success x b] (read-bytes codec b bounded?)]
 	  (if success
 	    [true (n->v (int x)) b]
 	    [false this b])))
@@ -186,11 +186,12 @@
 	codec (convert-sequence vs)
 	read-codec (compose-callback
 		     codec
-		     (fn [v b] [true (zipmap ks v) b]))]
+		     (fn [v b _]
+		       [true (zipmap ks v) b]))]
     (reify
       Reader
-      (read-bytes [_ b]
-	(read-bytes read-codec b))
+      (read-bytes [_ b bounded?]
+	(read-bytes read-codec b bounded?))
       Writer
       (sizeof [_]
 	(sizeof codec))

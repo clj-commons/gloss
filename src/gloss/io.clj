@@ -72,7 +72,7 @@
    for the frame, an exception is thrown."
   [codec bytes]
   (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
-	[success val remainder] (read-bytes codec buf-seq)]
+	[success val remainder] (read-bytes codec buf-seq true)]
     (when-not success
       (throw (Exception. "Insufficient bytes to decode frame.")))
     (when-not (empty? remainder)
@@ -87,7 +87,7 @@
     (loop [buf-seq buf-seq, vals []]
       (if (empty? buf-seq)
 	vals
-	(let [[success val remainder] (read-bytes codec buf-seq)]
+	(let [[success val remainder] (read-bytes codec buf-seq false)] ;;TODO: not always false
 	  (when-not success
 	    (throw (Exception. "Bytes left over after decoding sequence of frames.")))
 	  (recur remainder (conj vals val)))))))
@@ -96,7 +96,7 @@
   (loop [buf-seq buf-seq, vals [], reader reader]
     (if (empty? buf-seq)
       [vals reader nil]
-      (let [[success x remainder] (read-bytes reader buf-seq)]
+      (let [[success x remainder] (read-bytes reader buf-seq false)] ;;TODO: not always false
 	(if success
 	  (recur remainder (conj vals x) codec)
 	  [vals x remainder])))))
