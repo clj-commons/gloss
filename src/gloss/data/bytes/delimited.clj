@@ -21,6 +21,12 @@
   (let [buf ^ByteBuffer (first buf-seq)]
     (.get buf (.position buf))))
 
+(defn sort-delimiters [delimiters]
+  (->> delimiters
+    (map duplicate)
+    (sort #(compare (.remaining ^ByteBuffer %1) (.remaining ^ByteBuffer %2)))
+    reverse))
+
 (defn match-delimiters [delimiters buf-seq]
   (loop [delimiters delimiters]
     (when-not (empty? delimiters)
@@ -40,13 +46,9 @@
   ([buf-seq delimiters]
      (take-delimited-bytes buf-seq delimiters true))
   ([buf-seq delimiters strip-delimiters?]
-     (let [delimiters (->> delimiters
-			(map #(.duplicate ^ByteBuffer %))
-			(sort #(compare (.remaining ^ByteBuffer %1) (.remaining ^ByteBuffer %2)))
-			reverse)
-	   buf-seq (to-buf-seq buf-seq)]
+     (let [buf-seq (to-buf-seq buf-seq)]
        (loop [bytes (dup-bytes buf-seq)]
-	 (if (empty? bytes)
+	 (if (nil? bytes)
 	   [false nil buf-seq]
 	   (if-let [delimiter ^ByteBuffer (match-delimiters delimiters bytes)]
 	     (let [delimiter-count (-> delimiter .rewind .remaining)
@@ -60,7 +62,7 @@
   ([delimiters strip-delimiters?]
      (delimited-bytes-codec nil delimiters strip-delimiters?))
   ([scanned delimiters strip-delimiters?]
-     (let [delimiters (map duplicate delimiters)
+     (let [delimiters (sort-delimiters delimiters)
 	   max-delimiter-size (apply max
 				(map
 				  #(.remaining ^ByteBuffer %)

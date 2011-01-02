@@ -30,7 +30,7 @@
 (defn contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
   [buf-seq]
-  (when-let [buf-seq (to-buf-seq buf-seq)]
+  (when-let [buf-seq (-> buf-seq to-buf-seq bytes/dup-bytes)]
     (bytes/take-contiguous-bytes buf-seq (bytes/byte-count buf-seq))))
 
 ;;;
