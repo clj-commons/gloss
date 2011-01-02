@@ -117,6 +117,9 @@
     (repeated :byte :delimiters [64])
     (range 10))
   (test-roundtrip
+    (repeated (string :utf-8 :delimiters ["/n"]) :delimiters ["/0"])
+    ["foo" "bar" "baz"])
+  (test-roundtrip
     (repeated {:a :int32 :b :int32})
     (repeat 10 {:a 1 :b 2}))
   (test-roundtrip

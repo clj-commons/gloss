@@ -128,7 +128,7 @@
 	    (doseq [v vs]
 	      (write-bytes codec buf v))
 	    (.put ^ByteBuffer buf (duplicate suffix)))
-	  (apply concat
-	    (map #(write-bytes codec buf %) vs)
+	  (concat
+	    (mapcat #(write-bytes codec buf %) vs)
 	    [(duplicate suffix)]))))))
 
