@@ -73,7 +73,7 @@
 	   scanned (take-bytes scanned split-index)]
        (reify
 	 Reader
-	 (read-bytes [this b bounded?]
+	 (read-bytes [this b]
 	   (let [[success x xs] (take-delimited-bytes (concat prefix b) delimiters strip-delimiters?)]
 	     (if success
 	       [true (concat scanned x) xs]
@@ -89,15 +89,15 @@
   (let [delimiters (map duplicate delimiters)
 	delimited-codec (compose-callback
 			  (delimited-bytes-codec delimiters true)
-			  (fn [bytes remainder _]
-			    (let [[success v remainder*] (read-bytes codec (to-buf-seq bytes) true)]
+			  (fn [bytes remainder]
+			    (let [[success v remainder*] (read-bytes codec (to-buf-seq bytes))]
 			      (assert success)
 			      (assert (empty? remainder*))
 			      [true v remainder])))]
     (reify
       Reader
-      (read-bytes [_ b bounded?]
-	(read-bytes delimited-codec b bounded?))
+      (read-bytes [_ b]
+	(read-bytes delimited-codec b))
       Writer
       (sizeof [_]
 	nil)
@@ -119,8 +119,8 @@
 		     (take-all codec))]
     (reify
       Reader
-      (read-bytes [_ b bounded?]
-	(read-bytes read-codec b bounded?))
+      (read-bytes [_ b]
+	(read-bytes read-codec b))
       Writer
       (sizeof [_]
 	nil)

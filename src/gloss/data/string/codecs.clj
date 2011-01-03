@@ -50,19 +50,13 @@
 (defn finite-string-codec- [charset len decoder char-buf]
   (reify
     Reader
-    (read-bytes [this buf-seq bounded?]
-      (if bounded?
-	[true
-	 (when-not (empty? buf-seq)
-	   (.decode ^CharsetDecoder (create-decoder charset)
-	     (take-contiguous-bytes buf-seq (byte-count buf-seq))))
-	 nil]
-	(let [decoder (or decoder (create-decoder charset))
-	      char-buf (or char-buf (CharBuffer/allocate len))
-	      [^CharBuffer chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
-	  (if-not (.hasRemaining chars)
-	    [true (create-char-sequence [(.rewind chars)]) bytes]
-	    [false (finite-string-codec- charset len decoder char-buf) bytes]))))
+    (read-bytes [this buf-seq]
+      (let [decoder (or decoder (create-decoder charset))
+	    char-buf (or char-buf (CharBuffer/allocate len))
+	    [^CharBuffer chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
+	(if-not (.hasRemaining chars)
+	  [true (create-char-sequence [(.rewind chars)]) bytes]
+	  [false (finite-string-codec- charset len decoder char-buf) bytes])))
     Writer
     (sizeof [_]
       nil)
@@ -105,17 +99,12 @@
 (defn string-codec [charset]
   (reify
     Reader
-    (read-bytes [this buf-seq bounded?]
-      (if bounded?
-	[true
-	 (.decode ^CharsetDecoder (create-decoder charset)
-	   (take-contiguous-bytes buf-seq (byte-count buf-seq)))
-	 nil]
-	(let [decoder (create-decoder charset)
-	      [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
-	  (if (empty? chars)
-	    [false this buf-seq]
-	    [true (create-char-sequence chars) bytes]))))
+    (read-bytes [this buf-seq]
+      (let [decoder (create-decoder charset)
+	    [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
+	(if (empty? chars)
+	  [false this buf-seq]
+	  [true (create-char-sequence chars) bytes])))
     Writer
     (sizeof [_]
       nil)

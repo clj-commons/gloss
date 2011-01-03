@@ -125,12 +125,12 @@
   (let [codec (apply string charset (apply concat options))
 	read-codec (compose-callback
 		     codec
-		     (fn [n b _]
+		     (fn [n b]
 		       [true (Long/parseLong (str n)) b]))]
     (reify
       Reader
-      (read-bytes [_ b bounded?]
-	(read-bytes read-codec b bounded?))
+      (read-bytes [_ b]
+	(read-bytes read-codec b))
       Writer
       (sizeof [_]
 	nil)
@@ -142,12 +142,12 @@
   (let [codec (apply string charset (apply concat options))
 	read-codec (compose-callback
 		     codec
-		     (fn [n b _]
+		     (fn [n b]
 		       [true (Double/parseDouble (str n)) b]))]
     (reify
       Reader
-      (read-bytes [_ b bounded?]
-	(read-bytes read-codec b bounded?))
+      (read-bytes [_ b]
+	(read-bytes read-codec b))
       Writer
       (sizeof [_]
 	nil)
@@ -205,8 +205,8 @@
       (let [reader (take-all codec)]
 	(reify
 	  Reader
-	  (read-bytes [_ b _]
-	    (reader b nil true))
+	  (read-bytes [_ b]
+	    (reader b nil))
 	  Writer
 	  (sizeof [_]
 	    nil)

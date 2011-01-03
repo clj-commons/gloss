@@ -29,7 +29,7 @@
 (defmacro primitive-codec [accessor writer size typecast transform-fn]
   `(reify
      Reader
-     (read-bytes [this# b# bounded?#]
+     (read-bytes [this# b#]
        (if (< (byte-count b#) ~size)
 	 [false this# b#]
 	 (let [first-buf# (first b#)

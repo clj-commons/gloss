@@ -36,7 +36,7 @@
   [len]
   (reify
     Reader
-    (read-bytes [this b bounded?]
+    (read-bytes [this b]
       (if (< (byte-count b) len)
 	[false this b]
 	[true (take-bytes b len) (drop-bytes b len)]))
@@ -50,19 +50,18 @@
   [prefix-codec codec]
   (let [read-codec (compose-callback
 		     prefix-codec
-		     (fn [len b bounded?]
+		     (fn [len b]
 		       (if (zero? len)
 			 [true nil b]
 			 (read-bytes
 			   (compose-readers
 			     (finite-byte-codec len)
 			     codec)
-			   b
-			   true))))]
+			   b))))]
     (reify
       Reader
-      (read-bytes [_ b bounded?]
-	(read-bytes read-codec b bounded?))
+      (read-bytes [_ b]
+	(read-bytes read-codec b))
       Writer
       (sizeof [_]
 	nil)
