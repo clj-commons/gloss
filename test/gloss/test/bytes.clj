@@ -9,6 +9,7 @@
 (ns gloss.test.bytes
   (:use
     [gloss.data bytes]
+    [gloss.data.bytes.delimited :only (delimited-bytes-splitter)]
     [gloss.core formats])
   (:use [clojure test])
   (:import [java.nio ByteBuffer]))
@@ -38,10 +39,16 @@
   (let [s (mapcat byte-seq source)
 	split (map #(mapcat byte-seq %) (rest split))]
     (if (<= split-location (count s))
-      (is (= [(take split-location s) (drop (+ split-location skip-bytes) s)] split))
+      (is
+	(= [(take split-location s) (drop (+ split-location skip-bytes) s)] split)
+	(with-out-str (prn split-location skip-bytes (map byte-seq source))))
       (is (= [() s] split)))))
 
-'(deftest test-take-delimited-bytes
+(defn take-delimited-bytes [buf-seq delimiters strip-delimiters?]
+  (let [f (delimited-bytes-splitter delimiters strip-delimiters?)]
+    (f buf-seq)))
+
+(deftest test-take-delimited-bytes
   ;;single-byte delimiters
   (let [bufs (to-buf-seq (map to-byte-buffer (partition 3 (range 12))))]
     (dotimes [i 12]
@@ -55,8 +62,8 @@
     (test-split 101 0 bufs (take-delimited-bytes bufs [(to-byte-buffer [101])] false)))
 
   ;;multi-byte delimiters
-  (let [bufs (to-buf-seq (map to-byte-buffer (partition 3 (range 12))))]
+  (let [bufs (to-buf-seq (map to-byte-buffer (partition 1 (range 15))))]
     (dotimes [i 11]
-      (let [delimiters [(to-byte-buffer [i]) (to-byte-buffer [i (inc i)])]]
-	(test-split (+ i 2) 0 bufs (take-delimited-bytes bufs delimiters false))
-	(test-split i 2 bufs (take-delimited-bytes bufs delimiters true))))))
+      (let [delimiters (map #(to-byte-buffer (range i (+ i %))) (range 1 5))]
+	(test-split (+ i 4) 0 bufs (take-delimited-bytes bufs delimiters false))
+	(test-split i 4 bufs (take-delimited-bytes bufs delimiters true))))))

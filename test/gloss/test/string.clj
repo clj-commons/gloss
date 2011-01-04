@@ -33,15 +33,4 @@
 	    consumer (string-codec "utf-8")]
 	(is (= pilchards-string (apply str (frame-seq consumer segments))))))))
 
-(deftest test-finite-string-consumer
-  (let [divisors (filter #(zero? (rem 30 %)) (range 1 61))
-	pilchar (first "¶")]
-    (doseq [buf-interval divisors]
-      (doseq [string-interval divisors]
-	(let [strs (frame-seq
-		     (finite-string-codec "utf-8" string-interval)
-		     (split-bytes buf-interval pilchards))]
-	  (is (every? #(= string-interval (count %)) strs))
-	  (is (= 30 (count (apply str strs)))))))))
-
 

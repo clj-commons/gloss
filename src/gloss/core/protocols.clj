@@ -26,6 +26,9 @@
 (defn reader? [x]
   (satisfies? Reader x))
 
+(def complete? false)
+(def trailing? false)
+
 ;;;
 
 (defmacro with-buffer [[buf size] & body]

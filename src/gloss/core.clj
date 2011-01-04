@@ -86,9 +86,9 @@
   "Defines a frame which contains a string.  The charset must be a keyword,
    such as :utf-8 or :ascii.  Available options are :length, :delimiters, and :as-str.
 
-   A string with :length specified is of finite size:
+   A string with :length specified is of finite byte length:
 
-   (string :utf-8 :length 3)
+   (string :ascii :length 3)
 
    A string with :delimiters specified is terminated by one or more delimiters:
 
@@ -104,7 +104,8 @@
     (compile-frame
       (cond
 	(:length options)
-	(string/finite-string-codec charset (:length options))
+	(finite-frame (:length options)
+	  (string/string-codec charset))
 	
 	(:delimiters options)
 	(bytes/delimited-codec

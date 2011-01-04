@@ -20,5 +20,4 @@
 (import-fn core/create-char-sequence)
 
 (import-fn codecs/string-codec)
-(import-fn codecs/finite-string-codec)
 

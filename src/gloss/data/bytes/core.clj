@@ -155,21 +155,21 @@
 		      (conj accumulator (-> buf duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) slice))))
 		  accumulator))))))))
 
-  (take-contiguous-bytes- [_ n]
-    (when-not (< byte-count n)
-      (let [buf-seq (map duplicate buf-seq)
-	    first-buf ^ByteBuffer (first buf-seq)]
-	(if (> (.remaining first-buf) n)
-	  (-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
-	  (when (and (pos? n) (<= n byte-count))
-	    (let [ary (byte-array n)]
-	      (loop [offset 0, bytes buf-seq]
-		(if (>= offset n)
-		  (ByteBuffer/wrap ary)
-		  (let [buf ^ByteBuffer (first bytes)
-			num-bytes (min (.remaining buf) (- n offset))]
-		    (-> buf duplicate (.get ary offset num-bytes))
-		    (recur (+ offset num-bytes) (rest bytes)))))))))))
+  (take-contiguous-bytes- [this n]
+    (let [n (min byte-count n)
+	  buf-seq (map duplicate buf-seq)
+	  first-buf ^ByteBuffer (first buf-seq)]
+      (if (> (.remaining first-buf) n)
+	(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
+	(when (and (pos? n) (<= n byte-count))
+	  (let [ary (byte-array n)]
+	    (loop [offset 0, bytes buf-seq]
+	      (if (>= offset n)
+		(ByteBuffer/wrap ary)
+		(let [buf ^ByteBuffer (first bytes)
+		      num-bytes (min (.remaining buf) (- n offset))]
+		  (-> buf duplicate (.get ary offset num-bytes))
+		  (recur (+ offset num-bytes) (rest bytes))))))))))
 
   (concat-bytes- [_ bufs]
     (create-buf-seq (concat buf-seq bufs))))
@@ -213,21 +213,18 @@
       (not (pos? n))
       nil
       
-      (<= n byte-count)
+      (< n byte-count)
       (SingleBufferSequence. (take-contiguous-bytes this n) n)
 
       :else
-      nil))
+      this))
   (take-contiguous-bytes- [this n]
     (cond
       (not (pos? n))
       nil
 
       (<= n byte-count)
-      (-> buffer duplicate (limit n) slice)
-
-      :else
-      nil))
+      (-> buffer duplicate (limit (min byte-count n)) slice)))
   (concat-bytes- [_ bufs]
     (create-buf-seq (cons buffer bufs))))
 

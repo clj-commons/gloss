@@ -74,7 +74,7 @@
 	      accumulator)))))))
 
 
-(defn create-char-buf
+(defn ^CharBuffer create-char-buf
   [^CharsetDecoder decoder buf-seq]
   (CharBuffer/allocate (int (Math/ceil (/ (byte-count buf-seq) (.averageCharsPerByte decoder))))))
 
@@ -93,10 +93,10 @@
     (throw (IndexOutOfBoundsException. (str "[" start ", " end ") is not a valid interval.")))
     (-> char-buf-seq (drop-chars start) (take-chars (- end start)))))
 
-(defn create-decoder [charset]
+(defn ^CharsetDecoder create-decoder [charset]
   (.newDecoder (Charset/forName charset)))
 
-(defn create-encoder [charset]
+(defn ^CharsetEncoder create-encoder [charset]
   (.newEncoder (Charset/forName charset)))
 
 (defn create-char-sequence [char-buf-seq]

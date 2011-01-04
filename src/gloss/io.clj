@@ -101,9 +101,8 @@
 	  (recur remainder (conj vals x) codec)
 	  [vals x remainder])))))
 
-(defn decode-channel [codec ch]
-  (let [src (fork ch)
-	dst (channel)]
+(defn decode-channel [codec src]
+  (let [dst (channel)]
     (run-pipeline {:reader codec :bytes nil}
       (fn [state]
 	(run-pipeline src
@@ -112,7 +111,6 @@
 	    (if (nil? bytes)
 	      (when (closed? src)
 		(close dst))
-	      
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
 		    [s reader remainder] (decode-byte-sequence
 					   codec

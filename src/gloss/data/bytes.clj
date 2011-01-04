@@ -13,7 +13,11 @@
     [gloss.core formats protocols])
   (:require
     [gloss.data.bytes.delimited :as delimited]
-    [gloss.data.bytes.core :as core]))
+    [gloss.data.bytes.core :as core])
+  (:import
+    [gloss.data.bytes.core
+     SingleBufferSequence
+     MultiBufferSequence]))
 
 (import-fn core/create-buf-seq)
 (import-fn core/duplicate)
@@ -30,7 +34,9 @@
 (import-fn delimited/delimited-codec)
 (import-fn delimited/wrap-delimited-sequence)
 (import-fn delimited/delimited-bytes-codec)
-(import-fn delimited/take-delimited-bytes)
+
+(defn single-buffer? [x]
+  (instance? SingleBufferSequence x))
 
 (defn finite-byte-codec
   [len]
@@ -54,9 +60,15 @@
 		       (if (zero? len)
 			 [true nil b]
 			 (read-bytes
-			   (compose-readers
+			   (compose-callback
 			     (finite-byte-codec len)
-			     codec)
+			     (fn [v b]
+			       (let [[success v b*]
+				     (binding [complete? true]
+				       (read-bytes codec v))]
+				 (assert success)
+				 (assert (empty? b*))
+				 [true v b])))
 			   b))))]
     (reify
       Reader

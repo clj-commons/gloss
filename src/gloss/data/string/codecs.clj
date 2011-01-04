@@ -22,56 +22,6 @@
      CharsetDecoder
      CharsetEncoder]))
 
-(defn- take-finite-string-from-buf-seq [^CharsetDecoder decoder ^CharBuffer char-buf buf-seq]
-  (let [buf-seq (dup-bytes buf-seq)]
-    (if-not (.hasRemaining char-buf)
-      [char-buf buf-seq]
-      (loop [bytes buf-seq]
-	(if (empty? bytes)
-	  [char-buf nil]
-	  (let [first-buf ^ByteBuffer (first bytes)
-		result (.decode decoder first-buf char-buf false)]
-	    (cond
-	      
-	      (.isOverflow result)
-	      [char-buf (to-buf-seq bytes)]
-	      
-	      (and (.isUnderflow result) (pos? (.remaining first-buf)))
-	      (if (= 1 (count bytes))
-		[char-buf (to-buf-seq bytes)]
-		(recur
-		  (cons
-		    (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
-		    (drop-bytes (rest bytes) 1))))
-	      
-	      :else
-	      (recur (rest bytes)))))))))
-
-(defn finite-string-codec- [charset len decoder char-buf]
-  (reify
-    Reader
-    (read-bytes [this buf-seq]
-      (let [decoder (or decoder (create-decoder charset))
-	    char-buf (or char-buf (CharBuffer/allocate len))
-	    [^CharBuffer chars bytes] (take-finite-string-from-buf-seq decoder char-buf buf-seq)]
-	(if-not (.hasRemaining chars)
-	  [true (create-char-sequence [(.rewind chars)]) bytes]
-	  [false (finite-string-codec- charset len decoder char-buf) bytes])))
-    Writer
-    (sizeof [_]
-      nil)
-    (write-bytes [_ _ str]
-      (when-not (instance? CharSequence str)
-	(throw (Exception. (str "Expected a CharSequence, but got " str))))
-      (let [encoder (create-encoder charset)]
-	[(.encode ^CharsetEncoder encoder (to-char-buffer str))]))))
-
-(defn finite-string-codec
-  [charset len]
-  (finite-string-codec- charset len nil nil))
-
-;;;
-
 (defn take-string-from-buf-seq [^CharsetDecoder decoder, buf-seq]
   (let [buf-seq (dup-bytes buf-seq)
 	char-buf (create-char-buf decoder buf-seq)]
@@ -100,11 +50,13 @@
   (reify
     Reader
     (read-bytes [this buf-seq]
-      (let [decoder (create-decoder charset)
-	    [chars bytes] (take-string-from-buf-seq decoder buf-seq)]
-	(if (empty? chars)
-	  [false this buf-seq]
-	  [true (create-char-sequence chars) bytes])))
+      (let [decoder (create-decoder charset)]
+	(if (and (single-buffer? buf-seq) complete?)
+	  [true (.decode decoder (first buf-seq)) nil]
+	  (let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
+	    (if (empty? chars)
+	      [false this buf-seq]
+	      [true (create-char-sequence chars) bytes])))))
     Writer
     (sizeof [_]
       nil)
