@@ -44,6 +44,22 @@
 
 ;;;
 
+(import-fn bytes/bit-seq)
+
+(defn bit-map
+  "Defines an ordered map of signed integers with the specified bit-lengths.  The sum of
+   the bit-lengths must be divisible by 8.
+
+   (bit-map :a 3, :b 4, :c 1) <=> {:a 3, :b -15, :c false}"
+  [& args]
+  (let [ks (map first (partition 2 args))
+	vs (map second (partition 2 args))]
+    (compile-frame (apply bit-seq vs)
+      (fn [val] (map #(get val %) ks))
+      #(zipmap ks %))))
+
+;;;
+
 (import-fn codecs/enum)
 (import-fn codecs/ordered-map)
 

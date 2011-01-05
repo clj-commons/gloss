@@ -13,7 +13,8 @@
     [gloss.core formats protocols])
   (:require
     [gloss.data.bytes.delimited :as delimited]
-    [gloss.data.bytes.core :as core])
+    [gloss.data.bytes.core :as core]
+    [gloss.data.bytes.bits :as bits])
   (:import
     [gloss.data.bytes.core
      SingleBufferSequence
@@ -34,6 +35,8 @@
 (import-fn delimited/delimited-codec)
 (import-fn delimited/wrap-delimited-sequence)
 (import-fn delimited/delimited-bytes-codec)
+
+(import-fn bits/bit-seq)
 
 (defn single-buffer? [x]
   (instance? SingleBufferSequence x))

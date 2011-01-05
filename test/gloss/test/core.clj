@@ -180,6 +180,31 @@
     (enum :int16 {:a 100 :b 1000})
     :b))
 
+(deftest test-bit-seq
+  (test-roundtrip
+    (bit-seq 4 4)
+    [7 -7])
+  (test-roundtrip
+    (bit-seq 6 1 1)
+    [31 true false])
+  (test-roundtrip
+    (apply bit-seq (range 1 16))
+    (range 16))
+  (test-roundtrip
+    (apply bit-seq (range 1 16))
+    (take 16 (repeat 0)))
+  (test-roundtrip
+    [:int32 (bit-seq 4 4 4 4) :float32]
+    [1 [-2 -3 4 5] 6.0]))
+
+(deftest test-bit-map
+  (test-roundtrip
+    (bit-map :a 4 :b 4)
+    {:a 7 :b -7})
+  (test-roundtrip
+    (bit-map :a 7 :b 1)
+    {:a -31, :b false}))
+
 (deftest test-string
   (test-roundtrip
     (string :utf-8)
