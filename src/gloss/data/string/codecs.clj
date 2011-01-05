@@ -63,6 +63,12 @@
     (write-bytes [_ _ s]
       (when-not (instance? CharSequence s)
 	(throw (Exception. (str "Expected a CharSequence, but got " s " " (class s)))))
-      (if (string? s)
+      (cond
+	(empty? s)
+	nil
+	
+	(string? s)
 	[(ByteBuffer/wrap (.getBytes ^String s (name charset)))]
+
+	:else
 	[(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))]))))
