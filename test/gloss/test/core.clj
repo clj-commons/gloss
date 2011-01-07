@@ -213,7 +213,7 @@
     (repeated (string :utf-8 :delimiters ["\0"]))
     ["abc" "def"])
   (test-roundtrip
-    [:a (string :utf-8 :delimiters ["xyz"])]
+    [:a (string :utf-8 :delimiters ["xy" "xyz"])]
     [:a "abc"])
   (test-roundtrip
     (string :utf-8 :length 3)
