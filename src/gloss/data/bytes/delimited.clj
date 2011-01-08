@@ -35,7 +35,11 @@
   (let [buf (.rewind buf)]
     (take (.remaining buf) (repeatedly #(.get buf)))))
 
-(defn split-buf-seq [buf-seq max-delimiter-length]
+(defn buf->string [buf-seq]
+  (let [buf-seq (dup-bytes (to-buf-seq buf-seq))]
+    (map #(apply str (map char (take (.remaining %) (repeatedly (fn [] (.get %)))))) buf-seq)))
+
+(defn split-buf-seq [buf-seq min-delimiter-length max-delimiter-length]
   (let [buf-seq (dup-bytes buf-seq)
 	offset (dec max-delimiter-length)
 	dimensions (butlast (reductions + (map #(.remaining ^ByteBuffer %) buf-seq)))]
@@ -51,8 +55,10 @@
 		  (drop-bytes (- n offset))
 		  (take-contiguous-bytes (* 2 offset)))]]))
 	  (map vector dimensions (butlast buf-seq)))
-	[[(or (last dimensions) 0)
-	  (last buf-seq)]]))))
+	(let [last-buf ^ByteBuffer (last buf-seq)]
+	  (when (>= (.remaining last-buf) min-delimiter-length)
+	    [[(or (last dimensions) 0)
+	      (last buf-seq)]]))))))
 
 (defn delimiter-matcher [delimiter max-delimiter-length]
   (let [delimiter (byte-buffer->byte-seq delimiter)]
@@ -60,7 +66,8 @@
        (.position ~'buf ~'pos)
        (and
 	~@(when (< 1 max-delimiter-length)
-	    [`(<= ~'pos ~'final-position)])
+	    [`(<= ~'pos (or ~'final-position
+			  (unchecked-subtract ~'buf-length ~(count delimiter))))])
 	~@(map
 	    (fn [val] `(== ~(int val) (int (.get ~'buf))))
 	    delimiter)))))
@@ -71,9 +78,10 @@
     (eval
       (postwalk-replace
 	{'buf (with-meta 'buf {:tag "java.nio.ByteBuffer"})}
-	`(fn [~'buf]
+	`(fn [~'buf last-and-complete?#]
 	   (let [~'buf-length (.remaining ~'buf)
-		 ~'final-position (unchecked-subtract ~'buf-length ~max-delimiter-length)]
+		 ~'final-position (when-not last-and-complete?#
+				    (unchecked-subtract ~'buf-length ~max-delimiter-length))]
 	     (loop [~'pos 0]
 	       (if (== ~'pos ~'buf-length)
 		 [false 0 0]
@@ -83,7 +91,9 @@
 
 (defn-memo delimited-bytes-splitter [delimiters strip-delimiters?]
   (let [match-fn (match-loop delimiters strip-delimiters?)
-	max-delimiter-length (apply max (map #(.remaining ^ByteBuffer %) delimiters))]
+	delimiter-lengths (map #(.remaining ^ByteBuffer %) delimiters)
+	max-delimiter-length (apply max delimiter-lengths)
+	min-delimiter-length (apply min delimiter-lengths)]
     (if (= 1 max-delimiter-length)
 
       (fn [buf-seq]
@@ -93,7 +103,7 @@
 	   (if (empty? bufs)
 	     [false nil (rewind-bytes buf-seq)]
 	     (let [buf ^ByteBuffer (first bufs)]
-	       (let [[success end start] (match-fn buf)]
+	       (let [[success end start] (match-fn buf false)]
 		 (if success
 		   (let [buf-seq (rewind-bytes buf-seq)]
 		     [true
@@ -102,19 +112,22 @@
 		   (recur (unchecked-add offset (-> buf .rewind .remaining)) (rest bufs)))))))))
 
       (fn [buf-seq]
-	(if (empty? buf-seq)
-	  [false nil buf-seq]
-	  (loop [bufs (split-buf-seq buf-seq max-delimiter-length)]
-	   (if (empty? bufs)
-	     [false nil (rewind-bytes buf-seq)]
-	     (let [[offset buf] (first bufs)]
-	       (let [[success end start] (when buf (match-fn buf))]
-		 (if success
-		   (let [buf-seq (rewind-bytes buf-seq)]
-		     [true
-		      (take-bytes buf-seq (+ offset end))
-		      (drop-bytes buf-seq (+ offset start))])
-		   (recur (rest bufs))))))))))))
+	(let [complete? complete?]
+	  (if (empty? buf-seq)
+	    [false nil buf-seq]
+	    (loop [bufs (split-buf-seq buf-seq min-delimiter-length max-delimiter-length)]
+	      (if (empty? bufs)
+		[false nil (rewind-bytes buf-seq)]
+		(let [[offset buf] (first bufs)]
+		  (let [[success end start]
+			(when buf
+			  (match-fn buf (and complete? (= 1 (count bufs)))))]
+		    (if success
+		      (let [buf-seq (rewind-bytes buf-seq)]
+			[true
+			 (take-bytes buf-seq (+ offset end))
+			 (drop-bytes buf-seq (+ offset start))])
+		      (recur (rest bufs)))))))))))))
 
 (defn delimited-bytes-codec
   ([delimiters strip-delimiters?]

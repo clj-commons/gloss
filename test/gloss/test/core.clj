@@ -60,6 +60,7 @@
 	out (decode-channel frame in)]
     (doseq [b bytes]
       (enqueue in b))
+    (close in)
     (let [s (convert-result (channel-seq out))]
       (is= [val val] s))))
 

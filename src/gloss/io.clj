@@ -71,35 +71,42 @@
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
   [codec bytes]
-  (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
-	[success val remainder] (read-bytes codec buf-seq)]
-    (when-not success
-      (throw (Exception. "Insufficient bytes to decode frame.")))
-    (when-not (empty? remainder)
-      (throw (Exception. "Bytes left over after decoding frame.")))
-    val))
+  (binding [complete? true]
+    (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
+	  [success val remainder] (read-bytes codec buf-seq)]
+      (when-not success
+	(throw (Exception. "Insufficient bytes to decode frame.")))
+      (when-not (empty? remainder)
+	(throw (Exception. "Bytes left over after decoding frame.")))
+      val)))
 
 (defn decode-all
   "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
    of the sequence, an exception is thrown."
   [codec bytes]
-  (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))]
-    (loop [buf-seq buf-seq, vals []]
-      (if (empty? buf-seq)
-	vals
-	(let [[success val remainder] (read-bytes codec buf-seq)]
-	  (when-not success
-	    (throw (Exception. "Bytes left over after decoding sequence of frames.")))
-	  (recur remainder (conj vals val)))))))
+  (binding [complete? true]
+    (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))]
+      (loop [buf-seq buf-seq, vals []]
+	(if (empty? buf-seq)
+	  vals
+	  (let [[success val remainder] (read-bytes codec buf-seq)]
+	    (when-not success
+	      (throw (Exception. "Bytes left over after decoding sequence of frames.")))
+	    (recur remainder (conj vals val))))))))
 
 (defn- decode-byte-sequence [codec reader buf-seq]
-  (loop [buf-seq buf-seq, vals [], reader reader]
-    (if (empty? buf-seq)
-      [vals reader nil]
-      (let [[success x remainder] (read-bytes reader buf-seq)]
-	(if success
-	  (recur remainder (conj vals x) codec)
-	  [vals x remainder])))))
+  (if (empty? buf-seq)
+    (let [[success x remainder] (read-bytes reader buf-seq)]
+      (if success
+	[[x] codec remainder]
+	[nil x remainder]))
+    (loop [buf-seq buf-seq, vals [], reader reader]
+      (if (empty? buf-seq)
+	[vals reader nil]
+	(let [[success x remainder] (read-bytes reader buf-seq)]
+	  (if success
+	    (recur remainder (conj vals x) codec)
+	    [vals x remainder]))))))
 
 (defn decode-channel [codec src]
   (let [dst (channel)]
@@ -108,9 +115,7 @@
 	(run-pipeline src
 	  read-channel
 	  (fn [bytes]
-	    (if (nil? bytes)
-	      (when (closed? src)
-		(close dst))
+	    (binding [complete? (closed? src)]
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
 		    [s reader remainder] (decode-byte-sequence
 					   codec
