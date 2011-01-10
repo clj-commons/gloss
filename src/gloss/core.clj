@@ -128,6 +128,7 @@
 	  (->> (:delimiters options)
 	    (map #(if (string? %) (.getBytes ^String % charset) %))
 	    (map to-byte-buffer))
+	  (get options :strip-delimiters? true)
 	  (string/string-codec charset))
 	
 	:else
@@ -216,6 +217,7 @@
       (:delimiters options)
       (bytes/wrap-delimited-sequence
 	(map to-byte-buffer (:delimiters options))
+	(get options :strip-delimiters? true)
 	codec)
 
       (= :none (:prefix options))

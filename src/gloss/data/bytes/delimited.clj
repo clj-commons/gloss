@@ -162,54 +162,58 @@
 	   (concat v [(duplicate (first delimiters))]))))))
 
 (defn delimited-codec
-  [delimiters codec]
-  (let [delimiters (map duplicate delimiters)
-	delimited-codec (compose-callback
-			  (delimited-bytes-codec delimiters true)
-			  (fn [bytes remainder]
-			    (let [[success v remainder*]
-				  (binding [complete? true]
-				    (read-bytes codec (to-buf-seq bytes)))]
-			      (assert success)
-			      (assert (empty? remainder*))
-			      [true v remainder])))]
-    (reify
-      Reader
-      (read-bytes [_ b]
-	(read-bytes delimited-codec b))
-      Writer
-      (sizeof [_]
-	nil)
-      (write-bytes [_ buf v]
-	(concat
-	  (if (sizeof codec)
-	    (with-buffer [buf (sizeof codec)]
-	      (write-bytes codec buf v))
-	    (write-bytes codec buf v))
-	  [(duplicate (first delimiters))])))))
+  ([delimiters codec]
+     (delimited-codec delimiters true codec))
+  ([delimiters strip-delimiters? codec]
+     (let [delimiters (map duplicate delimiters)
+	   delimited-codec (compose-callback
+			     (delimited-bytes-codec delimiters strip-delimiters?)
+			     (fn [bytes remainder]
+			       (let [[success v remainder*]
+				     (binding [complete? true]
+				       (read-bytes codec (to-buf-seq bytes)))]
+				 (assert success)
+				 (assert (empty? remainder*))
+				 [true v remainder])))]
+       (reify
+	 Reader
+	 (read-bytes [_ b]
+	   (read-bytes delimited-codec b))
+	 Writer
+	 (sizeof [_]
+	   nil)
+	 (write-bytes [_ buf v]
+	   (concat
+	     (if (sizeof codec)
+	       (with-buffer [buf (sizeof codec)]
+		 (write-bytes codec buf v))
+	       (write-bytes codec buf v))
+	     [(duplicate (first delimiters))]))))))
 
 (defn wrap-delimited-sequence
-  [delimiters codec]
-  (let [delimiters (map duplicate delimiters)
-	suffix (first delimiters)
-	sizeof-delimiter (.remaining ^Buffer suffix)
-	read-codec (compose-callback
-		     (delimited-bytes-codec delimiters true)
-		     (take-all codec))]
-    (reify
-      Reader
-      (read-bytes [_ b]
-	(read-bytes read-codec b))
-      Writer
-      (sizeof [_]
-	nil)
-      (write-bytes [_ buf vs]
-	(if (sizeof codec)
-	  (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
-	    (doseq [v vs]
-	      (write-bytes codec buf v))
-	    (.put ^ByteBuffer buf (duplicate suffix)))
-	  (concat
-	    (mapcat #(write-bytes codec buf %) vs)
-	    [(duplicate suffix)]))))))
+  ([delimiters codec]
+     (wrap-delimited-sequence delimiters true codec))
+  ([delimiters strip-delimiters? codec]
+     (let [delimiters (map duplicate delimiters)
+	   suffix (first delimiters)
+	   sizeof-delimiter (.remaining ^Buffer suffix)
+	   read-codec (compose-callback
+			(delimited-bytes-codec delimiters strip-delimiters?)
+			(take-all codec))]
+       (reify
+	 Reader
+	 (read-bytes [_ b]
+	   (read-bytes read-codec b))
+	 Writer
+	 (sizeof [_]
+	   nil)
+	 (write-bytes [_ buf vs]
+	   (if (sizeof codec)
+	     (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
+	       (doseq [v vs]
+		 (write-bytes codec buf v))
+	       (.put ^ByteBuffer buf (duplicate suffix)))
+	     (concat
+	       (mapcat #(write-bytes codec buf %) vs)
+	       [(duplicate suffix)])))))))
 
