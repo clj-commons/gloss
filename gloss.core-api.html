@@ -1,0 +1,323 @@
+<html>
+  <head>
+    <title>gloss.core API reference (gloss)</title>
+    <link href="static/favicon.png" rel="icon" />
+    <link href="static/favicon.png" rel="shortcut icon" />
+    <link media="all" type="text/css" href="static/clojure.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/wiki.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/internal.css" rel="stylesheet" />
+    <!-- TODO: are we using these (from clojure.org)? If so, add the files -->
+    <script src="file/view/code_highlighter.js" type="text/javascript"></script>
+    <script src="file/view/clojure.js" type="text/javascript"></script>
+    <style>.menuWrapper{height: 36px;}</style>
+    <!--[if lte IE 6]>
+    <link rel="stylesheet" href="http://www.wikispaces.com/_/2009051601/s/internal_ie.css" type="text/css" />
+    <![endif]-->
+  </head>
+<!--
+This document was auto-generated from the source by the clojure autodoc system.
+To report errors or ask questions about the overall documentation structure, formatting,
+etc., contact Tom Faulhaber (google mail name: tomfaulhaber).
+For errors in the documentation of a particular namespace, contact the author of that
+namespace.
+-->
+  <body>
+    <div id="AllContentContainer">
+      <div id="Header">
+	<a id="Logo" href="index.html"><img alt="Clojure" height="100" width="100" src="static/clojure-icon.gif" /></a>
+	<h1><a title="page header title" id="page-header" href="index.html">gloss</a></h1>
+      </div>
+      <div id="leftcolumn"><div style="text-align: center;"></div>
+<div class="menu">
+  <div class="WikiCustomNav WikiElement wiki">
+    <a class="wiki_link" href="index.html">Overview</a><br />
+    <a class="wiki_link" href="api-index.html">API Index</a><br />
+    <a class="wiki_link" href="#">Namespaces:</a>
+    <ul id="left-sidebar-list">
+      <li><a href="gloss.core-api.html" class="wiki_link">gloss.core</a></li><li><a href="gloss.data.bytes.bits-api.html" class="wiki_link">gloss.data.bytes.bits</a></li><li><a href="gloss.io-api.html" class="wiki_link">gloss.io</a></li>
+    </ul>
+  </div>
+</div>
+</div>
+      <div id="rightcolumn">
+	<div id="Content">
+	  <div class="contentBox"><div class="innerContentBox">
+              <div id="content_view" class="wiki wikiPage">
+                <div id="right-sidebar"><div id="toc">
+  <h1 class="nopad">Table of Contents</h1>
+  <div style="margin-left: 1em;" class="toc-section">
+    <a href="#toc0">Overview</a>
+    <div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/bit-map">bit-map</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/bit-seq">bit-seq</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/byte-count">byte-count</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/compile-frame">compile-frame</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/defcodec">defcodec</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/defcodec-">defcodec-</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/delimited-block">delimited-block</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/delimited-frame">delimited-frame</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/enum">enum</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/finite-block">finite-block</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/finite-frame">finite-frame</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/header">header</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/ordered-map">ordered-map</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/prefix">prefix</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/repeated">repeated</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.core/string">string</a>
+    </div>
+    <br />
+  </div>
+</div>
+</div>
+                <div id="content-tag"><h1 id="overview">API for <span id="namespace-name">gloss.core</span></h1>
+by <span id="author">Unknown</span><br />
+<br />Usage:
+<pre>
+(ns your-namespace
+  (:require <span id="long-name">gloss.core</span>))
+</pre><pre>
+</pre><h2>Overview</h2>
+<pre id="namespace-docstr"></pre>
+<br />
+<h2>Public Variables and Functions</h2>
+<div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/bit-map">bit-map</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (bit-map &amp; args)
+</pre>
+  <pre id="var-docstr">Defines an ordered map of signed integers with the specified bit-lengths.  The sum of
+the bit-lengths must be divisible by 8.
+
+(bit-map :a 3, :b 4, :c 1) &lt;=&gt; {:a 3, :b -15, :c false}</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/bit-seq">bit-seq</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (bit-seq &amp; bit-lengths)
+</pre>
+  <pre id="var-docstr">Defines a sequence of signed integers with the specified bit-lengths.  The sum of the
+bit-lengths must be divisable by 8.  Single bit values are treated specially, and will
+decode to simply 'true' or 'false'.
+
+(bit-seq 4 3 1) &lt;=&gt; [7 -3 true]
+
+If a number is larger than its bit-count can contain, it will be truncated during encoding.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/byte-count">byte-count</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (byte-count b)
+</pre>
+  <pre id="var-docstr">Returns the number of bytes in the value.  Compatible with any data structure that can
+be transformed into a sequence of ByteBuffers.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/compile-frame">compile-frame</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (compile-frame frame)
+       (compile-frame frame pre-encoder post-decoder)
+</pre>
+  <pre id="var-docstr">Takes a frame, and returns a codec.  This function is idempotent; passing in a codec
+is a safe operation.
+
+Functions that transform the values after they are decoded and before they are encoded
+can be specified, which allows the frame to only be an intermediate representation of
+the final Clojure data structure.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/defcodec">defcodec</h2>
+  <span id="var-type">macro</span><br />
+  <pre id="var-usage">Usage: (defcodec name frame)
+</pre>
+  <pre id="var-docstr">Defines a compiled frame.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/defcodec-">defcodec-</h2>
+  <span id="var-type">macro</span><br />
+  <pre id="var-usage">Usage: (defcodec- name frame)
+</pre>
+  <pre id="var-docstr">Defines a private compiled frame.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/delimited-block">delimited-block</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (delimited-block delimiters strip-delimiters?)
+</pre>
+  <pre id="var-docstr">Defines a frame which is just a byte sequence terminated by one or more delimiters.
+
+If strip-delimiters? is true, the resulting byte sequences will not contain the
+delimiters.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/delimited-frame">delimited-frame</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (delimited-frame delimiters frame)
+</pre>
+  <pre id="var-docstr">Defines a frame which is terminated by delimiters.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/enum">enum</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (enum primitive-type &amp; map-or-seq)
+</pre>
+  <pre id="var-docstr">Takes a list of enumerations, or a map of enumerations onto values, and returns
+a codec which associates each enumeration with a unique encoded value.
+
+(enum :byte :a :b :c)
+(enum :int32 {:a 100, :b 200, :c 300})</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/finite-block">finite-block</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (finite-block prefix-or-len)
+</pre>
+  <pre id="var-docstr">Defines a byte sequence which is either of fixed length or has a prefix which
+describes its length.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/finite-frame">finite-frame</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (finite-frame prefix-or-len frame)
+</pre>
+  <pre id="var-docstr">Defines a frame which is either of finite length, or has a prefix which describes
+its length.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/header">header</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (header frame header-&gt;body body-&gt;header)
+</pre>
+  <pre id="var-docstr">A header is a frame which describes the frame that follows.  The decoded value
+from the header frame will be passed into 'header-&gt;body,' which will return the
+resulting codec for the body.  When encoding, the value of the body will be passed
+into 'body-&gt;header,' which will return the resulting value for the header.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/ordered-map">ordered-map</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (ordered-map &amp; key-value-pairs)
+</pre>
+  <pre id="var-docstr">Creates a codec which consumes and emits standard Clojure hash-maps, but
+ensures that the values are encoded in the specified order.  Useful for
+interop with C structs and network protocols.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/prefix">prefix</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (prefix primitive)
+       (prefix signature to-count from-count)
+</pre>
+  <pre id="var-docstr">A prefix is a specialized form of header, which only describes the length of the sequence
+that follows.  It is only meant to be used in the context of 'finite-frame' or 'repeated'.
+A prefix may be as simple as a primitive type:
+
+(prefix :int32)
+
+But may also be a more complex frame:
+
+(prefix
+  [(string :utf-8 :delimiters ["\0"]) :int64]
+  second
+  (fn [n] ["hello" n]))
+
+For complex prefixes, 'to-count' must take the value of the header and return the length
+of the sequence that follows, and 'from-count' must take the length of the sequence and
+return the value of the prefix.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/repeated">repeated</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (repeated frame &amp; {:as options})
+</pre>
+  <pre id="var-docstr">Describes a sequence of frames.  By default, the sequence is prefixed with a 32-bit integer
+describing the length of the sequence.  However, specifying a custom :prefix or :delimiters that
+terminate the sequence is also allowed.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.core/string">string</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (string charset &amp; {:as options})
+</pre>
+  <pre id="var-docstr">Defines a frame which contains a string.  The charset must be a keyword,
+such as :utf-8 or :ascii.  Available options are :length, :delimiters, and :as-str.
+
+A string with :length specified is of finite byte length:
+
+(string :ascii :length 3)
+
+A string with :delimiters specified is terminated by one or more delimiters:
+
+(string :utf-8 :delimiters ["\r\n" "\r"])
+
+By default, this function decodes to a java.lang.CharSequence instead of an
+actual string.  This is more memory-efficient, and clojure.contrib.str operates
+on CharSequences.  However, if a real string is necessary, set :as-str to true:
+
+(string :utf-8, :length 3, :as-str true)</pre>
+  
+</div>
+
+
+</div>
+              </div>
+            </div>
+          </div>
+	</div>
+	<div id="foot">
+	  <div style="text-align: center;" id="copyright">No copyright info </div>
+	</div>
+      </div>
+      <div id="DesignedBy">Logo &amp; site design by <a title="Visit Tom Hickey's website." href="http://www.tomhickey.com">Tom Hickey</a>.<br />
+      Clojure auto-documentation system by Tom Faulhaber.</div>
+    </div>
+    <!-- /AllContentContainer -->
+  </body>
+
+</html>
