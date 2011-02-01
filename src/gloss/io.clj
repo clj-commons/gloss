@@ -37,31 +37,35 @@
 
 (defn encode
   "Turns a frame value into a sequence of ByteBuffers."
-  [codec val]
-  (when val
-    (write-bytes codec nil val)))
+  [frame val]
+  (let [codec (compile-frame frame)]
+    (when val
+      (write-bytes codec nil val))))
 
 (defn encode-to-buffer
   "Encodes a sequence of values, and writes them to a ByteBuffer."
-  [codec buf vals]
-  (assert (sizeof codec))
-  (doseq [v vals]
-    (write-bytes codec buf v)))
+  [frame buf vals]
+  (let [codec (compile-frame frame)]
+    (assert (sizeof codec))
+    (doseq [v vals]
+      (write-bytes codec buf v))))
 
 (defn encode-all
   "Turns a sequence of frame values into a sequence of ByteBuffers."
-  [codec vals]
-  (if-let [size (sizeof codec)]
-    (let [buf (ByteBuffer/allocate (* size (count vals)))]
-      (encode-to-buffer codec buf vals)
-      [(.rewind buf)])
-    (apply concat
-      (map #(write-bytes codec nil %) vals))))
+  [frame vals]
+  (let [codec (compile-frame frame)]
+    (if-let [size (sizeof codec)]
+      (let [buf (ByteBuffer/allocate (* size (count vals)))]
+	(encode-to-buffer codec buf vals)
+	[(.rewind buf)])
+      (apply concat
+	(map #(write-bytes codec nil %) vals)))))
 
 (defn encode-to-stream
   "Encodes a sequence of values, and writes them to an OutputStream."
-  [codec output-stream vals]
-  (let [channel (Channels/newChannel output-stream)]
+  [frame output-stream vals]
+  (let [codec (compile-frame frame)
+	channel (Channels/newChannel output-stream)]
     (doseq [buf (encode-all codec vals)]
       (.write channel ^ByteBuffer buf))))
 
@@ -70,74 +74,100 @@
 (defn decode
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
-  [codec bytes]
-  (binding [complete? true]
-    (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
-	  [success val remainder] (read-bytes codec buf-seq)]
-      (when-not success
-	(throw (Exception. "Insufficient bytes to decode frame.")))
-      (when-not (empty? remainder)
-	(throw (Exception. "Bytes left over after decoding frame.")))
-      val)))
+  [frame bytes]
+  (let [codec (compile-frame frame)]
+    (binding [complete? true]
+      (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
+	    [success val remainder] (read-bytes codec buf-seq)]
+	(when-not success
+	  (throw (Exception. "Insufficient bytes to decode frame.")))
+	(when-not (empty? remainder)
+	  (throw (Exception. "Bytes left over after decoding frame.")))
+	val))))
 
 (defn decode-all
   "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
    of the sequence, an exception is thrown."
-  [codec bytes]
-  (binding [complete? true]
-    (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))]
-      (loop [buf-seq buf-seq, vals []]
-	(if (empty? buf-seq)
-	  vals
-	  (let [[success val remainder] (read-bytes codec buf-seq)]
-	    (when-not success
-	      (throw (Exception. "Bytes left over after decoding sequence of frames.")))
-	    (recur remainder (conj vals val))))))))
+  [frame bytes]
+  (let [codec (compile-frame frame)]
+    (binding [complete? true]
+      (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))]
+	(loop [buf-seq buf-seq, vals []]
+	  (if (empty? buf-seq)
+	    vals
+	    (let [[success val remainder] (read-bytes codec buf-seq)]
+	      (when-not success
+		(throw (Exception. "Bytes left over after decoding sequence of frames.")))
+	      (recur remainder (conj vals val)))))))))
 
-(defn- decode-byte-sequence [codec reader buf-seq]
+(defn- decode-byte-sequence [codecs buf-seq]
   (if (empty? buf-seq)
-    (let [[success x remainder] (read-bytes reader buf-seq)]
+    (let [[success x remainder] (read-bytes (first codecs) buf-seq)]
       (if success
-	[[x] codec remainder]
-	[nil x remainder]))
-    (loop [buf-seq buf-seq, vals [], reader reader]
-      (if (empty? buf-seq)
-	[vals reader nil]
-	(let [[success x remainder] (read-bytes reader buf-seq)]
+	[[x] (rest codecs) remainder]
+	[nil (cons x (rest codecs)) remainder]))
+    (loop [buf-seq buf-seq, vals [], codecs codecs]
+      (if (or (empty? codecs) (empty? buf-seq))
+	[vals codecs buf-seq]
+	(let [[success x remainder] (read-bytes (first codecs) buf-seq)]
 	  (if success
-	    (recur remainder (conj vals x) codec)
-	    [vals x remainder]))))))
+	    (recur remainder (conj vals x) (rest codecs))
+	    [vals (cons x (rest codecs)) remainder]))))))
 
-(defn decode-channel [codec src]
-  (let [dst (channel)]
-    (run-pipeline {:reader codec :bytes nil}
+(defn decode-channel
+  "Given a channel that emits bytes, returns a channel that emits decoded frames whenever
+   there are sufficient bytes."
+  [src frame]
+  (let [dst (channel)
+	codec (compile-frame frame)]
+    (run-pipeline {:codecs (repeat codec) :bytes nil}
       (fn [state]
-	(run-pipeline src
-	  read-channel
+	(run-pipeline (read-channel src)
 	  (fn [bytes]
 	    (binding [complete? (closed? src)]
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		    [s reader remainder] (decode-byte-sequence
-					   codec
-					   (:reader state)
+		    [s codecs remainder] (decode-byte-sequence
+					   (:codecs state)
 					   (bytes/concat-bytes (:bytes state) bytes))]
 		(when-not (empty? s)
 		  (apply enqueue dst s))
 		(when (closed? src)
 		  (close dst))
-		{:reader reader :bytes (to-buf-seq remainder)})))))
+		{:codecs codecs :bytes (to-buf-seq remainder)})))))
       (fn [x]
 	(when-not (closed? src)
 	  (restart x))))
     (splice dst nil-channel)))
 
-'(defn decode-stream [codec ^InputStream stream]
-  (let [ch (channel)]
-    (.start
-      (Thread.
-	(fn []
-	  (loop []
-	    (let [ary (byte-array (.available stream))]
-	      (.read stream ary)
-	      ())))))
-    (lazy-channel-seq (decode-channel codec ch))))
+(defn decode-channel-headers
+  "Given a channel that emits bytes, returns a channel that will emit one decoded frame for
+   each frame passed into the function.  After those frames have been decoded, the channel will
+   simply emit any bytes that are passed into the source channel."
+  [src & frames]
+  (let [dst (channel)]
+    (run-pipeline {:codecs (map compile-frame frames) :bytes nil}
+      (fn [state]
+	(run-pipeline (read-channel src)
+	  (fn [bytes]
+	    (if (empty? (:codecs state))
+	      state
+	      (binding [complete? (closed? src)]
+		(let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+		      [vals codecs remainder] (decode-byte-sequence
+						(:codecs state)
+						(bytes/concat-bytes (:bytes state) bytes))]
+		  (when-not (empty? vals)
+		    (apply enqueue dst vals))
+		  {:codecs codecs, :bytes (to-buf-seq remainder)}))))))
+      (fn [state]
+	(cond
+	  (empty? (:codecs state))
+	  (do
+	    (when-let [remainder (:bytes state)]
+	      (enqueue dst remainder))
+	    (siphon src dst)
+	    (on-closed src #(close dst)))
+
+	  (not (closed? src))
+	  (restart state))))
+    (splice dst nil-channel)))

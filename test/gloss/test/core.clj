@@ -54,14 +54,17 @@
   (let [bytes (-> bytes to-buf-seq dup-bytes)]
     [(take-bytes bytes index) (drop-bytes bytes index)]))
 
+(defn split-channel [split-fn frame val]
+  (apply sealed-channel (split-fn (encode-all frame [val val]))))
+
 (defn test-stream-roundtrip [split-fn frame val]
-  (let [bytes (split-fn (encode-all frame [val val]))
-	in (channel)
-	out (decode-channel frame in)]
-    (doseq [b bytes]
-      (enqueue in b))
-    (close in)
-    (let [s (convert-result (channel-seq out))]
+  (let [ch (decode-channel (split-channel split-fn frame val) frame)]
+    (let [s (convert-result (channel-seq ch))]
+      (is= [val val] s)))
+  (let [ch (decode-channel-headers (split-channel split-fn frame val) frame)
+	v1 (wait-for-message ch)
+	v2 (->> (decode-channel ch frame) channel-seq)]
+    (let [s (convert-result (cons v1 v2))]
       (is= [val val] s))))
 
 (defn test-roundtrip [f val]

@@ -91,6 +91,9 @@
 
   (cons [this bufs]
     (create-buf-seq (concat bufs buf-seq)))
+
+  (equiv [this other]
+    (= (seq this) other))
   
   BufferSequence
   (byte-count- [_]
@@ -188,6 +191,11 @@
     nil)
   (cons [_ bytes]
     (create-buf-seq (concat bytes [buffer])))
+  (equiv [this other]
+    (and
+      (sequential? other)
+      (= 1 (count other))
+      (= buffer (first other))))
   BufferSequence
   (byte-count- [_]
     byte-count)
