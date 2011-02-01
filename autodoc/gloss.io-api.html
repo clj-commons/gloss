@@ -1,0 +1,210 @@
+<html>
+  <head>
+    <title>gloss.io API reference (gloss)</title>
+    <link href="static/favicon.png" rel="icon" />
+    <link href="static/favicon.png" rel="shortcut icon" />
+    <link media="all" type="text/css" href="static/clojure.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/wiki.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/internal.css" rel="stylesheet" />
+    <!-- TODO: are we using these (from clojure.org)? If so, add the files -->
+    <script src="file/view/code_highlighter.js" type="text/javascript"></script>
+    <script src="file/view/clojure.js" type="text/javascript"></script>
+    <style>.menuWrapper{height: 36px;}</style>
+    <!--[if lte IE 6]>
+    <link rel="stylesheet" href="http://www.wikispaces.com/_/2009051601/s/internal_ie.css" type="text/css" />
+    <![endif]-->
+  </head>
+<!--
+This document was auto-generated from the source by the clojure autodoc system.
+To report errors or ask questions about the overall documentation structure, formatting,
+etc., contact Tom Faulhaber (google mail name: tomfaulhaber).
+For errors in the documentation of a particular namespace, contact the author of that
+namespace.
+-->
+  <body>
+    <div id="AllContentContainer">
+      <div id="Header">
+	<a id="Logo" href="index.html"><img alt="Clojure" height="100" width="100" src="static/clojure-icon.gif" /></a>
+	<h1><a title="page header title" id="page-header" href="index.html">gloss</a></h1>
+      </div>
+      <div id="leftcolumn"><div style="text-align: center;"></div>
+<div class="menu">
+  <div class="WikiCustomNav WikiElement wiki">
+    <a class="wiki_link" href="index.html">Overview</a><br />
+    <a class="wiki_link" href="api-index.html">API Index</a><br />
+    <a class="wiki_link" href="#">Namespaces:</a>
+    <ul id="left-sidebar-list">
+      <li><a href="gloss.core-api.html" class="wiki_link">gloss.core</a></li><li><a href="gloss.data.bytes.bits-api.html" class="wiki_link">gloss.data.bytes.bits</a></li><li><a href="gloss.io-api.html" class="wiki_link">gloss.io</a></li>
+    </ul>
+  </div>
+</div>
+</div>
+      <div id="rightcolumn">
+	<div id="Content">
+	  <div class="contentBox"><div class="innerContentBox">
+              <div id="content_view" class="wiki wikiPage">
+                <div id="right-sidebar"><div id="toc">
+  <h1 class="nopad">Table of Contents</h1>
+  <div style="margin-left: 1em;" class="toc-section">
+    <a href="#toc0">Overview</a>
+    <div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/contiguous">contiguous</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/decode">decode</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/decode-all">decode-all</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/decode-channel">decode-channel</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/decode-channel-headers">decode-channel-headers</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/encode">encode</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/encode-all">encode-all</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/encode-to-buffer">encode-to-buffer</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/encode-to-stream">encode-to-stream</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/to-buf-seq">to-buf-seq</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/to-byte-buffer">to-byte-buffer</a>
+    </div>
+    <br />
+  </div>
+</div>
+</div>
+                <div id="content-tag"><h1 id="overview">API for <span id="namespace-name">gloss.io</span></h1>
+by <span id="author">Unknown</span><br />
+<br />Usage:
+<pre>
+(ns your-namespace
+  (:require <span id="long-name">gloss.io</span>))
+</pre><pre>
+</pre><h2>Overview</h2>
+<pre id="namespace-docstr"></pre>
+<br />
+<h2>Public Variables and Functions</h2>
+<div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/contiguous">contiguous</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (contiguous buf-seq)
+</pre>
+  <pre id="var-docstr">Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/decode">decode</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (decode frame bytes)
+</pre>
+  <pre id="var-docstr">Turns bytes into a single frame value.  If there are too few or too many bytes
+for the frame, an exception is thrown.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/decode-all">decode-all</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (decode-all frame bytes)
+</pre>
+  <pre id="var-docstr">Turns bytes into a sequence of frame values.  If there are bytes left over at the end
+of the sequence, an exception is thrown.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/decode-channel">decode-channel</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (decode-channel src frame)
+</pre>
+  <pre id="var-docstr">Given a channel that emits bytes, returns a channel that emits decoded frames whenever
+there are sufficient bytes.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/decode-channel-headers">decode-channel-headers</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (decode-channel-headers src &amp; frames)
+</pre>
+  <pre id="var-docstr">Given a channel that emits bytes, returns a channel that will emit one decoded frame for
+each frame passed into the function.  After those frames have been decoded, the channel will
+simply emit any bytes that are passed into the source channel.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/encode">encode</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (encode frame val)
+</pre>
+  <pre id="var-docstr">Turns a frame value into a sequence of ByteBuffers.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/encode-all">encode-all</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (encode-all frame vals)
+</pre>
+  <pre id="var-docstr">Turns a sequence of frame values into a sequence of ByteBuffers.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/encode-to-buffer">encode-to-buffer</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (encode-to-buffer frame buf vals)
+</pre>
+  <pre id="var-docstr">Encodes a sequence of values, and writes them to a ByteBuffer.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/encode-to-stream">encode-to-stream</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (encode-to-stream frame output-stream vals)
+</pre>
+  <pre id="var-docstr">Encodes a sequence of values, and writes them to an OutputStream.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/to-buf-seq">to-buf-seq</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (to-buf-seq x)
+</pre>
+  <pre id="var-docstr">Converts the value to a sequence of ByteBuffers.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/to-byte-buffer">to-byte-buffer</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (to-byte-buffer x)
+</pre>
+  <pre id="var-docstr">Converts the value to a Bytebuffer.</pre>
+  
+</div>
+
+
+</div>
+              </div>
+            </div>
+          </div>
+	</div>
+	<div id="foot">
+	  <div style="text-align: center;" id="copyright">No copyright info </div>
+	</div>
+      </div>
+      <div id="DesignedBy">Logo &amp; site design by <a title="Visit Tom Hickey's website." href="http://www.tomhickey.com">Tom Hickey</a>.<br />
+      Clojure auto-documentation system by Tom Faulhaber.</div>
+    </div>
+    <!-- /AllContentContainer -->
+  </body>
+
+</html>
