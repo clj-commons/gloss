@@ -54,6 +54,10 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#gloss.io/decode-all">decode-all</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/decode-channel">decode-channel</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#gloss.io/decode-channel-headers">decode-channel-headers</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#gloss.io/encode">encode</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#gloss.io/encode-all">encode-all</a>
@@ -109,6 +113,27 @@ for the frame, an exception is thrown.</pre>
 </pre>
   <pre id="var-docstr">Turns bytes into a sequence of frame values.  If there are bytes left over at the end
 of the sequence, an exception is thrown.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/decode-channel">decode-channel</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (decode-channel src frame)
+</pre>
+  <pre id="var-docstr">Given a channel that emits bytes, returns a channel that emits decoded frames whenever
+there are sufficient bytes.</pre>
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="gloss.io/decode-channel-headers">decode-channel-headers</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (decode-channel-headers src &amp; frames)
+</pre>
+  <pre id="var-docstr">Given a channel that emits bytes, returns a channel that will emit one decoded frame for
+each frame passed into the function.  After those frames have been decoded, the channel will
+simply emit any bytes that are passed into the source channel.</pre>
   
 </div><div id="var-entry">
   <br />
