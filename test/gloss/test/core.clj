@@ -55,7 +55,7 @@
     [(take-bytes bytes index) (drop-bytes bytes index)]))
 
 (defn split-channel [split-fn frame val]
-  (apply sealed-channel (split-fn (encode-all frame [val val]))))
+  (apply closed-channel (split-fn (encode-all frame [val val]))))
 
 (defn test-stream-roundtrip [split-fn frame val]
   (let [ch (decode-channel (split-channel split-fn frame val) frame)]

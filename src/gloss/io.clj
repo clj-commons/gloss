@@ -124,18 +124,18 @@
       (fn [state]
 	(run-pipeline (read-channel src)
 	  (fn [bytes]
-	    (binding [complete? (closed? src)]
+	    (binding [complete? (drained? src)]
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
 		    [s codecs remainder] (decode-byte-sequence
 					   (:codecs state)
 					   (bytes/concat-bytes (:bytes state) bytes))]
 		(when-not (empty? s)
 		  (apply enqueue dst s))
-		(when (closed? src)
+		(when (drained? src)
 		  (close dst))
 		{:codecs codecs :bytes (to-buf-seq remainder)})))))
       (fn [x]
-	(when-not (closed? src)
+	(when-not (drained? src)
 	  (restart x))))
     (splice dst nil-channel)))
 
@@ -151,7 +151,7 @@
 	  (fn [bytes]
 	    (if (empty? (:codecs state))
 	      state
-	      (binding [complete? (closed? src)]
+	      (binding [complete? (drained? src)]
 		(let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
 		      [vals codecs remainder] (decode-byte-sequence
 						(:codecs state)
@@ -166,8 +166,8 @@
 	    (when-let [remainder (:bytes state)]
 	      (enqueue dst remainder))
 	    (siphon src dst)
-	    (on-closed src #(close dst)))
+	    (on-drained src #(close dst)))
 
-	  (not (closed? src))
+	  (not (drained? src))
 	  (restart state))))
     (splice dst nil-channel)))
