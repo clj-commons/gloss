@@ -20,17 +20,17 @@
 	  #(take-bytes (drop-bytes buf-seq %) 1)
 	  (range (byte-count buf-seq)))))))
 
-(def pilchards-string (apply str (repeat 30 "¶")))
-(def pilchards (.getBytes pilchards-string "utf-8"))
+(def pilcrow-string (apply str (repeat 30 "¶")))
+(def pilcrows (.getBytes pilcrow-string "utf-8"))
 
 (defn segments [interval]
-  (split-bytes interval pilchards))
+  (split-bytes interval pilcrows))
 
 (deftest test-string-consumers
   (doseq [i (range 1 61)]
     (when (zero? (rem 60 i))
-      (let [segments (split-bytes i pilchards)
+      (let [segments (split-bytes i pilcrows)
 	    consumer (string-codec "utf-8")]
-	(is (= pilchards-string (apply str (frame-seq consumer segments))))))))
+	(is (= pilcrow-string (apply str (frame-seq consumer segments))))))))
 
 
