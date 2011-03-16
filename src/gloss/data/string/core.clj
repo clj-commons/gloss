@@ -114,4 +114,4 @@
       (count [_] length))))
 
 (defmethod print-method ::char-sequence [char-seq writer]
-  (print-method (str char-seq) writer))
+  (print-method (str "#<CharSequence " char-seq " >") writer))

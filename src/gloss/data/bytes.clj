@@ -60,17 +60,19 @@
   (let [read-codec (compose-callback
 		     prefix-codec
 		     (fn [len b]
-		       (read-bytes
-			 (compose-callback
-			   (finite-byte-codec len)
-			   (fn [v b]
-			     (let [[success v b*]
-				   (binding [complete? true]
-				     (read-bytes codec v))]
-			       (assert success)
-			       (assert (empty? b*))
-			       [true v b])))
-			 b)))]
+		       (if (zero? len)
+			 [true nil b]
+			 (read-bytes
+			   (compose-callback
+			     (finite-byte-codec len)
+			     (fn [v b]
+			       (let [[success v b*]
+				     (binding [complete? true]
+				       (read-bytes codec v))]
+				 (assert success)
+				 (assert (empty? b*))
+				[true v b])))
+			   b))))]
     (reify
       Reader
       (read-bytes [_ b]
