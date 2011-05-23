@@ -116,27 +116,31 @@
 
    (string :utf-8, :length 3, :as-str true)"
   [charset & {:as options}]
-  (let [charset (name charset)]
-    (compile-frame
-      (cond
-	(:length options)
-	(finite-frame (:length options)
+  (let [charset (name charset)
+	suffix-length (if (:suffix options)
+			(-> options :suffix to-byte-buffer to-buf-seq byte-count)
+			0)]
+    (codecs/wrap-suffixed-codec (:suffix options)
+      (compile-frame
+	(cond
+	  (or (:length options) (:prefix options))
+	  (finite-frame (or (:length options) (:prefix options))
+	    (string/string-codec charset))
+	  
+	  (:delimiters options)
+	  (bytes/delimited-codec
+	    (->> (:delimiters options)
+	      (map #(if (string? %) (.getBytes ^String % charset) %))
+	      (map to-byte-buffer))
+	    (get options :strip-delimiters? true)
+	    (string/string-codec charset))
+	  
+	  :else
 	  (string/string-codec charset))
-	
-	(:delimiters options)
-	(bytes/delimited-codec
-	  (->> (:delimiters options)
-	    (map #(if (string? %) (.getBytes ^String % charset) %))
-	    (map to-byte-buffer))
-	  (get options :strip-delimiters? true)
-	  (string/string-codec charset))
-	
-	:else
-	(string/string-codec charset))
-      identity
-      (if (or (:as-str options) false)
-	str
-	identity))))
+	identity
+	(if (or (:as-str options) false)
+	  str
+	  identity)))))
 
 (defn string-integer
   [charset & {:as options}]

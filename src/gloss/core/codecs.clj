@@ -139,6 +139,41 @@
 
 ;;;
 
+(defn print-bufs [& vals]
+  (let [b (-> (last vals) to-buf-seq dup-bytes)]
+    (apply prn (concat (butlast vals) [(str (second (read-bytes (string-codec "utf-8") b)))]))
+    (last vals)))
+
+(defn wrap-suffixed-codec
+  [suffix codec]
+  (if (nil? suffix)
+    codec
+    (let [suffix (-> suffix to-byte-buffer to-buf-seq)
+	  suffix-length (byte-count suffix)]
+      (reify
+	Reader
+	(read-bytes [this b]
+	  (let [len (byte-count b)
+		available (- len suffix-length)]
+	    (if (pos? available)
+	      (let [[success x remainder] (read-bytes codec (take-bytes (dup-bytes b) available))]
+		(if success
+		  [true x (concat-bytes
+			    (drop-bytes remainder suffix-length)
+			    (when-not (empty? remainder)
+			      (drop-bytes b available)))]
+		  [false this b]))
+	      [false this b])))
+	Writer
+	(sizeof [_]
+	  nil)
+	(write-bytes [_ buf vs]
+	  (concat
+	    (write-bytes codec nil vs)
+	    suffix))))))
+
+;;;
+
 (defn enum
   "Takes a list of enumerations, or a map of enumerations onto values, and returns
    a codec which associates each enumeration with a unique encoded value.

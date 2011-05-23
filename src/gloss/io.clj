@@ -27,7 +27,7 @@
 (import-fn #'formats/to-byte-buffer)
 (import-fn #'formats/to-buf-seq)
 
-(defn contiguous
+(defn ^ByteBuffer contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
   [buf-seq]
   (when-let [buf-seq (-> buf-seq to-buf-seq bytes/dup-bytes)]

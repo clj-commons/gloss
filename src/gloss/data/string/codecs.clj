@@ -52,7 +52,7 @@
     (read-bytes [this buf-seq]
       (let [decoder (create-decoder charset)]
 	(if (and (single-buffer? buf-seq) complete?)
-	  [true (.decode decoder (first buf-seq)) nil]
+	  [true (.decode decoder (.duplicate ^ByteBuffer (first buf-seq))) nil]
 	  (let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
 	    (if (empty? chars)
 	      [false this buf-seq]

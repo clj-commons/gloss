@@ -89,6 +89,8 @@
   (is= val (decode f (-> buf to-buf-seq dup-bytes)))
   (is (= buf (write-bytes f nil val))))
 
+;;;
+
 (deftest test-lists
   (test-roundtrip
     [:float32 :float32]
@@ -222,6 +224,12 @@
   (test-roundtrip
     (string :utf-8 :length 3)
     "foo")
+  (test-roundtrip
+    (string :utf-8 :length 3 :suffix "z")
+    "foo")
+  (test-roundtrip
+    (string :utf-8 :suffix "z" :delimiters ["\r\n"])
+    "foobar")
   (test-roundtrip
     (finite-frame 5 (string :utf-8))
     "abcde"))
