@@ -139,11 +139,6 @@
 
 ;;;
 
-(defn print-bufs [& vals]
-  (let [b (-> (last vals) to-buf-seq dup-bytes)]
-    (apply prn (concat (butlast vals) [(str (second (read-bytes (string-codec "utf-8") b)))]))
-    (last vals)))
-
 (defn wrap-suffixed-codec
   [suffix codec]
   (if (nil? suffix)

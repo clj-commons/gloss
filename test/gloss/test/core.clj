@@ -256,3 +256,12 @@
   (test-roundtrip
     (ordered-map :b :int32 :a [:int32 :int32])
     {:a [2 3] :b 1}))
+
+(deftest test-netstrings
+  (test-roundtrip
+    (finite-frame
+      (prefix (string-integer :ascii :delimiters [":"])
+	inc
+	dec)
+      (string :utf-8 :suffix ","))
+    "abc"))
