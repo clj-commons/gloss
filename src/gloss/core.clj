@@ -44,7 +44,7 @@
 
 ;;;
 
-(import-fn bytes/bit-seq)
+(import-fn #'bytes/bit-seq)
 
 (defn bit-map
   "Defines an ordered map of signed integers with the specified bit-lengths.  The sum of
@@ -60,8 +60,8 @@
 
 ;;;
 
-(import-fn codecs/enum)
-(import-fn codecs/ordered-map)
+(import-fn #'codecs/enum)
+(import-fn #'codecs/ordered-map)
 
 (defn delimited-block
   "Defines a frame which is just a byte sequence terminated by one or more delimiters.

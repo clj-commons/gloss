@@ -14,10 +14,10 @@
     [gloss.data.string.core :as core]
     [gloss.data.string.codecs :as codecs]))
 
-(import-fn core/take-chars)
-(import-fn core/drop-chars)
-(import-fn core/rewind-chars)
-(import-fn core/create-char-sequence)
+(import-fn #'core/take-chars)
+(import-fn #'core/drop-chars)
+(import-fn #'core/rewind-chars)
+(import-fn #'core/create-char-sequence)
 
-(import-fn codecs/string-codec)
+(import-fn #'codecs/string-codec)
 
