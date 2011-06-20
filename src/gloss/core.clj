@@ -100,7 +100,8 @@
 
 (defn string
   "Defines a frame which contains a string.  The charset must be a keyword,
-   such as :utf-8 or :ascii.  Available options are :length, :delimiters, and :as-str.
+   such as :utf-8 or :ascii.  Available options are :length, :delimiters, :suffix,
+   and :char-sequence.
 
    A string with :length specified is of finite byte length:
 
@@ -110,13 +111,24 @@
 
    (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])
 
-   By default, this function decodes to a java.lang.CharSequence instead of an
-   actual string.  This is more memory-efficient, and clojure.contrib.str operates
-   on CharSequences.  However, if a real string is necessary, set :as-str to true:
+   If a string is already bounded in length, but has a terminating sequence, use :suffix
 
-   (string :utf-8, :length 3, :as-str true)"
+   (string :utf-8, :length 3, :suffix \"\\r\\n\")
+
+   :suffix can be used in conjunction with both :length and :delimiters.  The given :length
+   is assumed to not include the suffix, and the delimiters are assumed to be followed by the
+   suffix.
+
+   By default, this frame will return a string, but it can be more memory-efficient to
+   have it return a java.lang.CharSequence instead.  This frame also will encode CharSequences.
+   To have the decoded result be a CharSequence, set :char-sequence to true:
+
+   (string :utf-8, :length 3, :char-sequence true)"
   [charset & {:as options}]
-  (let [charset (name charset)
+  (let [options (merge
+		  {:char-sequence false}
+		  options)
+	charset (name charset)
 	suffix-length (if (:suffix options)
 			(-> options :suffix to-byte-buffer to-buf-seq byte-count)
 			0)]
@@ -138,7 +150,7 @@
 	  :else
 	  (string/string-codec charset))
 	identity
-	(if (or (:as-str options) false)
+	(if-not (:char-sequence options)
 	  str
 	  identity)))))
 
