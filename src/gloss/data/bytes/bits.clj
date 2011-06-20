@@ -15,23 +15,45 @@
     [java.math BigInteger]
     [java.nio ByteBuffer]))
 
+(defn to-bool [x]
+  (if (number? x)
+    (not (zero? x))
+    x))
+
 (defn ^BigInteger bit-range [num-bytes start end]
   (reduce
     #(.setBit ^BigInteger %1 %2)
     (BigInteger. (byte-array num-bytes))
     (range start end)))
 
-(defn to-bool [x]
-  (if (number? x)
-    (not (zero? x))
-    x))
+(defn ^BigInteger buf-seq->big-integer [buf byte-length]
+  (let [ary (byte-array byte-length)]
+    (-> buf ^ByteBuffer (take-contiguous-bytes byte-length) (.get ary))
+    (BigInteger. ary)))
+
+(defn bit-mask-reader [offset length]
+  (let [mask (bit-range length offset (+ offset length))]
+    (fn [^BigInteger n]
+      (let [val (-> n (.and mask) (.shiftRight offset))]
+	(if (= 1 length)
+	  (.testBit val 0)
+	  (.intValue val))))))
+
+(defn bit-mask-writer [offset length]
+  (if (= 1 length)
+    (fn [^BigInteger n val]
+      (if (to-bool val)
+	(.setBit n offset)
+	n))
+    (fn [^BigInteger n val]
+      (.or n (.shiftLeft (BigInteger/valueOf val) offset)))))
 
 (defn bit-seq
-  "Defines a sequence of signed integers with the specified bit-lengths.  The sum of the
+  "Defines a sequence of unsigned integers with the specified bit-lengths.  The sum of the
    bit-lengths must be divisable by 8.  Single bit values are treated specially, and will
    decode to simply 'true' or 'false'.
 
-   (bit-seq 4 3 1) <=> [7 -3 true]
+   (bit-seq 4 3 1) <=> [15 7 true]
 
    If a number is larger than its bit-count can contain, it will be truncated during encoding."
   [& bit-lengths]
@@ -40,49 +62,33 @@
       (throw (Exception. (str "Total length of " total-length " not divisable by 8."))))
     (let [byte-length (/ total-length 8)
 	  bit-offsets (reductions + 0 bit-lengths)
-	  bit-masks (doall(map
-			    #(bit-range byte-length %1 (+ %1 %2))
-			    bit-offsets
-			    bit-lengths))]
+	  readers (map bit-mask-reader bit-offsets bit-lengths)
+	  writers (map bit-mask-writer bit-offsets bit-lengths)]
       (reify
 	Reader
 	(read-bytes [this b]
 	  (if (< (byte-count b) byte-length)
 	    [false this b]
-	    (let [ary (byte-array byte-length)]
-	      (-> b (take-contiguous-bytes byte-length) (.get ary))
-	      (let [bits (BigInteger. ary)]
-		[true
-		 (doall
-		   (map
-		     #(let [val ^BigInteger (-> ^BigInteger %1 (.and %2) (.shiftRight %3))]
-			(if (= 1 %4)
-			  (.testBit val 0)
-			  (.intValue val)))
-		     (repeat bits)
-		     bit-masks
-		     bit-offsets
-		     bit-lengths))
-		 (drop-bytes b byte-length)]))))
+	    [true
+	     (doall (map #(%1 %2) readers (repeat (buf-seq->big-integer b byte-length))))
+	     (drop-bytes b byte-length)]))
 	Writer
 	(sizeof [_] byte-length)
 	(write-bytes [this buf vals]
 	  (with-buffer [^ByteBuffer buf byte-length]
-	    (let [vals (map
-			 #(let [val ^BigInteger
-				(if (= 1 %4)
-				  (if (to-bool %1)
-				    (.setBit (BigInteger/ZERO) 1)
-				    (BigInteger/ZERO))
-				  (BigInteger/valueOf %1))]
-			    (.and ^BigInteger %3 (.shiftLeft val %2)))
-			 vals
-			 bit-offsets
-			 bit-masks
-			 bit-lengths)]
-	      (let [ary (.toByteArray ^BigInteger (reduce #(.or ^BigInteger %1 %2) vals))
-		    pos (.position buf)]
-		(.put ^ByteBuffer buf ary 0 (min (count ary) byte-length))
-		(.position buf (+ pos byte-length))))))))))
+	    (let [ary (->> vals
+			(map vector writers)
+			^BigInteger
+			(reduce
+			  (fn [^BigInteger n [writer val]]
+			    (writer n val))
+			  (BigInteger/ZERO))
+			.toByteArray)
+		  pos (.position ^ByteBuffer buf)
+		  cnt (count ary)]
+	      (if (> cnt byte-length)
+		(.put ^ByteBuffer buf ary (- cnt byte-length) byte-length)
+		(.put ^ByteBuffer buf ary 0 cnt))
+	      (.position ^ByteBuffer buf (+ pos byte-length)))))))))
 
 
