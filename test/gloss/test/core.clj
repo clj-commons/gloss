@@ -70,12 +70,13 @@
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
 	bytes (encode f val)
-	val (convert-char-sequences (decode f bytes))
+	val* (convert-char-sequences (decode f bytes))
 	bytes (encode-all f [val val])
 	result (decode-all f bytes)
 	contiguous-result (decode-all f (contiguous bytes))
 	split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all f))
 	]
+    (is= val val*)
     (test-stream-roundtrip #(partition-bytes 1 %) f val)
     (is= [val val] result)
     (is= [val val] split-result)
@@ -189,27 +190,27 @@
 (deftest test-bit-seq
   (test-roundtrip
     (bit-seq 4 4)
-    [7 -7])
+    [1 15])
   (test-roundtrip
     (bit-seq 6 1 1)
     [31 true false])
   (test-roundtrip
     (apply bit-seq (range 1 16))
-    (range 16))
+    (cons false (rest (range 16))))
   (test-roundtrip
     (apply bit-seq (range 1 16))
-    (take 16 (repeat 0)))
+    (cons false (take 15 (repeat 0))))
   (test-roundtrip
     [:int32 (bit-seq 4 4 4 4) :float32]
-    [1 [-2 -3 4 5] 6.0]))
+    [1 [13 12 1 5] 6.0]))
 
 (deftest test-bit-map
   (test-roundtrip
     (bit-map :a 4 :b 4)
-    {:a 7 :b -7})
+    {:a 1 :b 15})
   (test-roundtrip
     (bit-map :a 7 :b 1)
-    {:a -31, :b false}))
+    {:a 63, :b false}))
 
 (deftest test-string
   (test-roundtrip
