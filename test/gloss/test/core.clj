@@ -187,7 +187,7 @@
     (enum :int16 {:a 100 :b 1000})
     :b))
 
-(deftest test-bit-seq
+#_(deftest test-bit-seq
   (test-roundtrip
     (bit-seq 4 4)
     [1 15])
@@ -204,7 +204,7 @@
     [:int32 (bit-seq 4 4 4 4) :float32]
     [1 [13 12 1 5] 6.0]))
 
-(deftest test-bit-map
+#_(deftest test-bit-map
   (test-roundtrip
     (bit-map :a 4 :b 4)
     {:a 1 :b 15})
@@ -238,7 +238,10 @@
 (deftest test-string-numbers
   (test-roundtrip
     (repeated (string-integer :utf-8 :length 5))
-    [12345 67890])
+    [12345 67890 123 45])
+  (test-roundtrip
+    (repeated (string-float :utf-8 :length 5))
+    [123.4 67.89 1.23 4.5])
   (test-roundtrip
     (repeated (string-integer :ascii :delimiters ["x"]))
     [1 23 456 7890])

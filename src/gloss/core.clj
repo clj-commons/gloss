@@ -154,6 +154,16 @@
 	  str
 	  identity)))))
 
+(defn- pad-number [s options]
+  (if-not (:length options)
+    s
+    (let [lo (:length options)
+	  ls (count s)]
+      (cond
+	(< ls lo) (str (apply str (repeat (- lo ls) "0")) s)
+	(> ls lo) (throw (Exception. (str "'" s "' is longer than given length of " lo)))
+	:else s))))
+
 (defn string-integer
   [charset & {:as options}]
   (let [codec (apply string charset (apply concat options))
@@ -169,7 +179,7 @@
       (sizeof [_]
 	nil)
       (write-bytes [_ _ v]
-	(write-bytes codec nil (str (long v)))))))
+	(write-bytes codec nil (pad-number (str (long v)) options))))))
 
 (defn string-float
   [charset & {:as options}]
@@ -186,7 +196,7 @@
       (sizeof [_]
 	nil)
       (write-bytes [_ _ v]
-	(write-bytes codec nil (str (double v)))))))
+	(write-bytes codec nil (pad-number (str (double v)) options))))))
 
 (defn header
   "A header is a frame which describes the frame that follows.  The decoded value
