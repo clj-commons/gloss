@@ -4,6 +4,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo}
   :dependencies [[org.clojure/clojure "1.2.0"]
-				 [lamina "0.4.0-alpha1"]
+				 [lamina "0.4.0-alpha3-SNAPSHOT"]
 				 [potemkin "0.1.0"]]
   :jvm-opts ["-server"])

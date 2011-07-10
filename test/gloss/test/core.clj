@@ -67,6 +67,11 @@
     (let [s (convert-result (cons v1 v2))]
       (is= [val val] s))))
 
+(defn test-simple-roundtrip [f val]
+  (let [bytes (encode f val)
+	val* (convert-char-sequences (decode f bytes))]
+    (is (= val val*))))
+
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
 	bytes (encode f val)
@@ -187,7 +192,7 @@
     (enum :int16 {:a 100 :b 1000})
     :b))
 
-#_(deftest test-bit-seq
+(deftest test-bit-seq
   (test-roundtrip
     (bit-seq 4 4)
     [1 15])
@@ -196,15 +201,15 @@
     [31 true false])
   (test-roundtrip
     (apply bit-seq (range 1 16))
-    (cons false (rest (range 16))))
+    (cons false (rest (range 1 16))))
   (test-roundtrip
     (apply bit-seq (range 1 16))
-    (cons false (take 15 (repeat 0))))
+    (cons false (take 14 (repeat 0))))
   (test-roundtrip
     [:int32 (bit-seq 4 4 4 4) :float32]
     [1 [13 12 1 5] 6.0]))
 
-#_(deftest test-bit-map
+(deftest test-bit-map
   (test-roundtrip
     (bit-map :a 4 :b 4)
     {:a 1 :b 15})

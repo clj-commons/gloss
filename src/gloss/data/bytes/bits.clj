@@ -15,6 +15,9 @@
     [java.math BigInteger]
     [java.nio ByteBuffer]))
 
+(defn print-bits [b]
+  (println "bits" (.bitLength b) (map #(if (.testBit b %) 1 0) (range (.bitLength b)))))
+
 (defn to-bool [x]
   (if (number? x)
     (not (zero? x))
@@ -59,7 +62,7 @@
   [& bit-lengths]
   (let [total-length (apply + bit-lengths)]
     (when-not (zero? (rem total-length 8))
-      (throw (Exception. (str "Total length of " total-length " not divisable by 8."))))
+      (throw (Exception. (str "Total bit-length of " total-length " not divisable by 8."))))
     (let [byte-length (/ total-length 8)
 	  bit-offsets (reductions + 0 bit-lengths)
 	  readers (map bit-mask-reader bit-offsets bit-lengths)
@@ -86,9 +89,12 @@
 			.toByteArray)
 		  pos (.position ^ByteBuffer buf)
 		  cnt (count ary)]
-	      (if (> cnt byte-length)
-		(.put ^ByteBuffer buf ary (- cnt byte-length) byte-length)
-		(.put ^ByteBuffer buf ary 0 cnt))
+	      (when (< cnt byte-length)
+		(.position ^ByteBuffer buf (+ pos (- byte-length cnt))))
+	      (.put ^ByteBuffer buf
+		ary
+		(max 0 (- cnt byte-length))
+		(min cnt byte-length))
 	      (.position ^ByteBuffer buf (+ pos byte-length)))))))))
 
 
