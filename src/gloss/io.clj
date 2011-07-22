@@ -10,7 +10,7 @@
   (:use
     [gloss.core codecs structure protocols]
     [potemkin]
-    [lamina core])
+    [lamina core api])
   (:require
     [gloss.core.formats :as formats]
     [gloss.data.bytes :as bytes])
@@ -118,8 +118,10 @@
   "Given a channel that emits bytes, returns a channel that emits decoded frames whenever
    there are sufficient bytes."
   [src frame]
-  (let [dst (channel)
+  (let [src (copy src)
+	dst (channel)
 	codec (compile-frame frame)]
+    (on-closed dst #(close src))
     (run-pipeline {:codecs (repeat codec) :bytes nil}
       (fn [state]
 	(run-pipeline (read-channel src)
