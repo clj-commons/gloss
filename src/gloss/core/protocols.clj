@@ -26,8 +26,8 @@
 (defn reader? [x]
   (satisfies? Reader x))
 
-(def complete? false)
-(def trailing? false)
+(def ^{:dynamic true} complete? false)
+(def ^{:dynamic true} trailing? false)
 
 ;;;
 
