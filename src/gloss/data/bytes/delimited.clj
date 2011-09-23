@@ -32,12 +32,19 @@
     reverse))
 
 (defn byte-buffer->byte-seq [^ByteBuffer buf]
-  (let [buf (.rewind buf)]
+  (let [buf ^ByteBuffer (.rewind buf)]
     (take (.remaining buf) (repeatedly #(.get buf)))))
 
 (defn buf->string [buf-seq]
   (let [buf-seq (dup-bytes (to-buf-seq buf-seq))]
-    (map #(apply str (map char (take (.remaining %) (repeatedly (fn [] (.get %)))))) buf-seq)))
+    (map
+      (fn [^ByteBuffer buf]
+	(->> #(.get buf)
+	  repeatedly
+	  (take (.remaining buf))
+	  map char
+	  apply str))
+      buf-seq)))
 
 (defn split-buf-seq [buf-seq min-delimiter-length max-delimiter-length]
   (let [buf-seq (dup-bytes buf-seq)

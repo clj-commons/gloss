@@ -20,7 +20,8 @@
     [java.nio
      ByteBuffer]
     [java.io
-     InputStream]))
+     InputStream
+     OutputStream]))
 
 ;;;
 
@@ -63,7 +64,7 @@
 
 (defn encode-to-stream
   "Encodes a sequence of values, and writes them to an OutputStream."
-  [frame output-stream vals]
+  [frame ^OutputStream output-stream vals]
   (let [codec (compile-frame frame)
 	channel (Channels/newChannel output-stream)]
     (doseq [buf (encode-all codec vals)]

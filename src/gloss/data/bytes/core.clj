@@ -200,7 +200,7 @@
   (byte-count- [_]
     byte-count)
   (write-to-buf [_ buf]
-    (.put buf buffer))
+    (.put ^ByteBuffer buf buffer))
   (rewind-bytes [this]
     (.rewind buffer)
     this)

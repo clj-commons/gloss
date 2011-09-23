@@ -15,8 +15,8 @@
     [java.math BigInteger]
     [java.nio ByteBuffer]))
 
-(defn print-bits [b]
-  (println "bits" (.bitLength b) (map #(if (.testBit b %) 1 0) (range (.bitLength b)))))
+(defn print-bits [^BigInteger b]
+  (println (.bitLength b) (map #(if (.testBit b %) 1 0) (range (.bitLength b)))))
 
 (defn to-bool [x]
   (if (number? x)
