@@ -102,6 +102,9 @@
     [:float32 :float32]
     [1 2])
   (test-roundtrip
+    [:ubyte :uint16 :uint32 :uint64]
+    [0xFF 0xFFFF 0xFFFFFFFF 0xFFFFFFFFFFFFFFFF])
+  (test-roundtrip
     [:a :byte :float64 :b]
     [:a 1 2 :b])
   (test-roundtrip

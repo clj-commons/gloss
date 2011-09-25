@@ -26,7 +26,43 @@
     (string? x) (-> x first int byte)
     :else (throw (Exception. (str "Cannot convert " x " to byte.")))))
 
-(defmacro primitive-codec [accessor writer size typecast transform-fn]
+(defn bits [x num-bits]
+  (map #(if (pos? (bit-and (bit-shift-left 1 %) x)) 1 0) (range num-bits)))
+
+(defn byte->ubyte
+  [x]
+  (bit-and 0xFF (Short. (short x))))
+
+(defn short->ushort
+  [x]
+  (bit-and 0xFFFF (Integer. (int x))))
+
+(defn int->uint
+  [x]
+  (bit-and 0xFFFFFFFF (Long. (long x))))
+  
+(defn long->ulong
+  [x]
+  (bit-and 0xFFFFFFFFFFFFFFFF (bigint x)))
+
+(defn ubyte->byte
+  [x]
+  (.byteValue (Short. (short x))))
+
+(defn ushort->short
+  [x]
+  (.shortValue (Integer. (int x))))
+
+(defn uint->int
+  [x]
+  (.intValue (Long. (long x))))
+
+(defn ulong->long
+  [x]
+  (.longValue (bigint x)))
+
+
+(defmacro primitive-codec [accessor writer size get-transform typecast put-transform]
   `(reify
      Reader
      (read-bytes [this# b#]
@@ -37,30 +73,34 @@
 	   (cond
 	     (= ~size remaining#)
 	     [true
-	      (~accessor ^ByteBuffer first-buf#)
+	      (~get-transform (~accessor ^ByteBuffer first-buf#))
 	      (rest b#)]
 	     
 	     (< ~size remaining#)
 	     [true
-	      (~accessor ^ByteBuffer first-buf#)
+	      (~get-transform (~accessor ^ByteBuffer first-buf#))
 	      (-> b# rewind-bytes (drop-bytes ~size))]
 	     
 	     :else
 	     (let [buf# (take-contiguous-bytes b# ~size)]
 	       [true
-		(~accessor ^ByteBuffer buf#)
+		(~get-transform (~accessor ^ByteBuffer buf#))
 		(drop-bytes b# ~size)])))))
      Writer
      (sizeof [_]
        ~size)
      (write-bytes [_ buf# v#]
        (with-buffer [buf# ~size]
-	 (~writer ^ByteBuffer buf# (~typecast (~transform-fn v#)))))))
+	 (~writer ^ByteBuffer buf# (~typecast (~put-transform v#)))))))
 
 (def primitive-codecs
-  {:byte (primitive-codec .get .put 1 byte to-byte) 
-   :int16 (primitive-codec .getShort .putShort 2 short identity)
-   :int32 (primitive-codec .getInt .putInt 4 int identity)
-   :int64 (primitive-codec .getLong .putLong 8 long identity)
-   :float32 (primitive-codec .getFloat .putFloat 4 float identity)
-   :float64 (primitive-codec .getDouble .putDouble 8 double identity)})
+  {:byte (primitive-codec .get .put 1 identity byte to-byte) 
+   :int16 (primitive-codec .getShort .putShort 2 identity short identity)
+   :int32 (primitive-codec .getInt .putInt 4 identity int identity)
+   :int64 (primitive-codec .getLong .putLong 8 identity long identity)
+   :float32 (primitive-codec .getFloat .putFloat 4 identity float identity)
+   :float64 (primitive-codec .getDouble .putDouble 8 identity double identity)
+   :ubyte (primitive-codec .get .put 1 byte->ubyte byte ubyte->byte)
+   :uint16 (primitive-codec .getShort .putShort 2 short->ushort short ushort->short)
+   :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
+   :uint64 (primitive-codec .getLong .putLong 8 long->ulong long ulong->long)})
