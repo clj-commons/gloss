@@ -124,6 +124,7 @@
 	codec (compile-frame frame)]
     (on-closed dst #(close src))
     (run-pipeline {:codecs (repeat codec) :bytes nil}
+      :error-handler (fn [_] (close dst))
       (fn [state]
 	(run-pipeline (read-channel src)
 	  (fn [bytes]
