@@ -64,7 +64,11 @@
     (when-not (zero? (rem total-length 8))
       (throw (Exception. (str "Total bit-length of " total-length " not divisable by 8."))))
     (let [byte-length (/ total-length 8)
-	  bit-offsets (reductions + 0 bit-lengths)
+	  bit-offsets (->> bit-lengths
+			(reductions + 0)
+			butlast
+			(map #(- total-length %))
+			(map #(- %2 %1) bit-lengths))
 	  readers (map bit-mask-reader bit-offsets bit-lengths)
 	  writers (map bit-mask-writer bit-offsets bit-lengths)]
       (reify
