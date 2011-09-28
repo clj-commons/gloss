@@ -130,7 +130,7 @@
 	  (fn [bytes]
 	    (binding [complete? (drained? src)]
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		    [s codecs remainder] (when bytes
+		    [s codecs remainder] (when-not (empty? bytes)
 					   (decode-byte-sequence
 					     (:codecs state)
 					     (bytes/concat-bytes (:bytes state) bytes)))]
