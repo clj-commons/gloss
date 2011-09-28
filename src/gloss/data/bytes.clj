@@ -53,7 +53,7 @@
     (sizeof [_]
       len)
     (write-bytes [_ buf v]
-      (let [v (-> v to-buf-seq dup-bytes)]
+      (when-let [v (-> v to-buf-seq dup-bytes)]
 	(if-not buf
 	  v
 	  (core/write-to-buf v buf))))))
