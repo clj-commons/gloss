@@ -161,8 +161,14 @@
      (finite-block
        (prefix :int64
 	 #(- % 4)
-	 #(+ % 4)))]
-    [1 1 (encode (repeated :int16) (range 5))]))
+	 #(+ % 4)))
+     (finite-block 3)
+     {:abc (finite-block 3)}]
+    [1
+     1
+     (encode (repeated :int16) (range 5))
+     (encode (string :ascii) "abc")
+     {:abc (encode (string :ascii) "abc")}]))
 
 (deftest test-complex-prefix
   (let [p (prefix [:byte :byte]

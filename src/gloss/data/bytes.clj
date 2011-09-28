@@ -52,8 +52,11 @@
     Writer
     (sizeof [_]
       len)
-    (write-bytes [_ _ v]
-      v)))
+    (write-bytes [_ buf v]
+      (let [v (-> v to-buf-seq dup-bytes)]
+	(if-not buf
+	  v
+	  (core/write-to-buf v buf))))))
 
 (defn wrap-finite-block
   [prefix-codec codec]
