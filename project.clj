@@ -5,5 +5,5 @@
             :distribution :repo}
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [lamina "0.4.1-SNAPSHOT"]
-                 [potemkin "0.1.0"]]
+                 [potemkin "0.1.1-SNAPSHOT"]]
   :jvm-opts ["-server"])

@@ -12,7 +12,6 @@
     gloss.data.bytes.core
     gloss.core.protocols
     gloss.core.formats
-    clojure.contrib.def
     clojure.pprint
     clojure.walk)
   (:import
@@ -96,45 +95,48 @@
 		   [true ~(if strip-delimiters? 'pos `(.position ~'buf)) (.position ~'buf)]
 		   (recur (unchecked-inc ~'pos)))))))))))
 
-(defn-memo delimited-bytes-splitter [delimiters strip-delimiters?]
-  (let [match-fn (match-loop delimiters strip-delimiters?)
-	delimiter-lengths (map #(.remaining ^ByteBuffer %) delimiters)
-	max-delimiter-length (apply max delimiter-lengths)
-	min-delimiter-length (apply min delimiter-lengths)]
-    (if (= 1 max-delimiter-length)
+(def delimited-bytes-splitter
+  (memoize
+    (fn
+      [delimiters strip-delimiters?]
+      (let [match-fn (match-loop delimiters strip-delimiters?)
+            delimiter-lengths (map #(.remaining ^ByteBuffer %) delimiters)
+            max-delimiter-length (apply max delimiter-lengths)
+            min-delimiter-length (apply min delimiter-lengths)]
+        (if (= 1 max-delimiter-length)
 
-      (fn [buf-seq]
-	(if (empty? buf-seq)
-	  [false nil buf-seq]
-	  (loop [offset 0, bufs (dup-bytes buf-seq)]
-	   (if (empty? bufs)
-	     [false nil (rewind-bytes buf-seq)]
-	     (let [buf ^ByteBuffer (first bufs)]
-	       (let [[success end start] (match-fn buf false)]
-		 (if success
-		   (let [buf-seq (rewind-bytes buf-seq)]
-		     [true
-		      (take-bytes buf-seq (+ offset end))
-		      (drop-bytes buf-seq (+ offset start))])
-		   (recur (unchecked-add offset (-> buf .rewind .remaining)) (rest bufs)))))))))
+          (fn [buf-seq]
+            (if (empty? buf-seq)
+              [false nil buf-seq]
+              (loop [offset 0, bufs (dup-bytes buf-seq)]
+                (if (empty? bufs)
+                  [false nil (rewind-bytes buf-seq)]
+                  (let [buf ^ByteBuffer (first bufs)]
+                    (let [[success end start] (match-fn buf false)]
+                      (if success
+                        (let [buf-seq (rewind-bytes buf-seq)]
+                          [true
+                           (take-bytes buf-seq (+ offset end))
+                           (drop-bytes buf-seq (+ offset start))])
+                        (recur (unchecked-add offset (-> buf .rewind .remaining)) (rest bufs)))))))))
 
-      (fn [buf-seq]
-	(let [complete? complete?]
-	  (if (empty? buf-seq)
-	    [false nil buf-seq]
-	    (loop [bufs (split-buf-seq buf-seq min-delimiter-length max-delimiter-length)]
-	      (if (empty? bufs)
-		[false nil (rewind-bytes buf-seq)]
-		(let [[offset buf] (first bufs)]
-		  (let [[success end start]
-			(when buf
-			  (match-fn buf (and complete? (= 1 (count bufs)))))]
-		    (if success
-		      (let [buf-seq (rewind-bytes buf-seq)]
-			[true
-			 (take-bytes buf-seq (+ offset end))
-			 (drop-bytes buf-seq (+ offset start))])
-		      (recur (rest bufs)))))))))))))
+          (fn [buf-seq]
+            (let [complete? complete?]
+              (if (empty? buf-seq)
+                [false nil buf-seq]
+                (loop [bufs (split-buf-seq buf-seq min-delimiter-length max-delimiter-length)]
+                  (if (empty? bufs)
+                    [false nil (rewind-bytes buf-seq)]
+                    (let [[offset buf] (first bufs)]
+                      (let [[success end start]
+                            (when buf
+                              (match-fn buf (and complete? (= 1 (count bufs)))))]
+                        (if success
+                          (let [buf-seq (rewind-bytes buf-seq)]
+                            [true
+                             (take-bytes buf-seq (+ offset end))
+                             (drop-bytes buf-seq (+ offset start))])
+                          (recur (rest bufs)))))))))))))))
 
 (defn delimited-bytes-codec
   ([delimiters strip-delimiters?]
