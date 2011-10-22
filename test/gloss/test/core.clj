@@ -29,10 +29,15 @@
        %)
     x))
 
+(defn normalize-number [x]
+  (if (instance? clojure.lang.BigInt x)
+    x
+    (double x)))
+
 (defn convert-string-sequence [x]
   (if (and (sequential? x) (every? string? x))
     (apply str x)
-    x))
+    (postwalk #(if (number? %) (normalize-number %) %) x)))
 
 (defn convert-result [x]
   (-> x convert-buf-seqs convert-char-sequences convert-string-sequence))

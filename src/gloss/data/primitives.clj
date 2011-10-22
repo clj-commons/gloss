@@ -40,10 +40,13 @@
 (defn int->uint
   [x]
   (bit-and 0xFFFFFFFF (Long. (long x))))
-  
+
+(defn long->byte-array [^long n]
+  (-> (ByteBuffer/allocate 8) (.putLong n) .array))
+
 (defn long->ulong
   [x]
-  (bit-and 0xFFFFFFFFFFFFFFFF (bigint x)))
+  (bigint (BigInteger. 1 (long->byte-array x))))
 
 (defn ubyte->byte
   [x]
