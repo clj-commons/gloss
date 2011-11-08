@@ -61,6 +61,38 @@
   [x]
   (.longValue (bigint x)))
 
+(defn bytes-umedium
+  [x]
+  (let [[b0 b1 b2] x]
+    (bit-or
+     (bit-or
+      (bit-shift-left (bit-and b0 0xFF) 16)
+      (bit-shift-left (bit-and b1 0xFF) 8))
+     (bit-shift-left (bit-and b2 0xFF) 0))))
+
+(defn umedium-medium
+  [x]
+  (let [uval2 (bit-and x 0x800000)]
+    (if (not= uval2 0)
+      (bit-or x 0xff000000)
+      x)))
+
+(defn medium-bytes
+  [x]
+  (into-array Byte/TYPE
+   (map byte
+        [(bit-shift-right x 16)
+         (bit-shift-right x 8)
+         (bit-shift-right x 0)])))
+
+(defn getMedium [buffer]
+  (let [bytes (byte-array 3)]
+    (.get buffer bytes)
+    (bytes-umedium bytes)))
+
+(defn putMedium [buffer value]
+  (let [bytes (medium-bytes value)]
+    (.put buffer bytes)))
 
 (defmacro primitive-codec [accessor writer size get-transform typecast put-transform]
   `(reify
@@ -93,14 +125,18 @@
        (with-buffer [buf# ~size]
 	 (~writer ^ByteBuffer buf# (~typecast (~put-transform v#)))))))
 
+
+
 (def primitive-codecs
   {:byte (primitive-codec .get .put 1 identity byte to-byte) 
    :int16 (primitive-codec .getShort .putShort 2 identity short identity)
+   :int24 (primitive-codec getMedium putMedium 3 umedium-medium int identity)
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
    :int64 (primitive-codec .getLong .putLong 8 identity long identity)
    :float32 (primitive-codec .getFloat .putFloat 4 identity float identity)
    :float64 (primitive-codec .getDouble .putDouble 8 identity double identity)
    :ubyte (primitive-codec .get .put 1 byte->ubyte byte ubyte->byte)
    :uint16 (primitive-codec .getShort .putShort 2 short->ushort short ushort->short)
+   :uint24 (primitive-codec getMedium putMedium 3 identity int identity)
    :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
    :uint64 (primitive-codec .getLong .putLong 8 long->ulong long ulong->long)})
