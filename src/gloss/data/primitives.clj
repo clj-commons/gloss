@@ -95,7 +95,7 @@
          (bit-shift-right x 8)
          (bit-shift-right x 0)])))
 
-(defn getMedium [buffer]
+(defn getUnsignedMedium [buffer]
   (let [bytes (byte-array 3)]
     (.get buffer bytes)
     (bytes-umedium bytes)))
@@ -161,7 +161,7 @@
    :int16-le (primitive-codec .getShort .putShort 2 identity short identity :le)
    :int16-be (primitive-codec .getShort .putShort 2 identity short identity :be)
 
-   :int24 (primitive-codec getMedium putMedium 3 umedium-medium int identity)
+   :int24 (primitive-codec getUnsignedMedium putMedium 3 umedium-medium int identity)
 
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
    :int32-le (primitive-codec .getInt .putInt 4 identity int identity :le)
@@ -185,7 +185,7 @@
    :uint16-le (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :le)
    :uint16-be (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
 
-   :uint24 (primitive-codec getMedium putMedium 3 identity int identity)
+   :uint24 (primitive-codec getUnsignedMedium putMedium 3 identity int identity)
 
    :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
    :uint32-le (primitive-codec .getInt .putInt 4 int->uint int uint->int :le)
