@@ -80,12 +80,17 @@
 	result (decode-all f bytes)
 	contiguous-result (decode-all f (contiguous bytes))
 	split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all f))
-	]
+	lazy-result (lazy-decode-all f bytes)
+        lazy-contiguous-result (lazy-decode-all f bytes)
+        lazy-split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (lazy-decode-all f))]
     (is= val val*)
     (test-stream-roundtrip #(partition-bytes 1 %) f val)
     (is= [val val] result)
     (is= [val val] split-result)
     (is= [val val] contiguous-result)
+    (is= [val val] lazy-result)
+    (is= [val val] lazy-split-result)
+    (is= [val val] lazy-contiguous-result)
     (doseq [i (range 1 (byte-count bytes))]
       (is= [val val] (decode-all f (apply concat (split-bytes i bytes))))
       (test-stream-roundtrip #(split-bytes i %) f val)
