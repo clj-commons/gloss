@@ -86,20 +86,38 @@
 	  (throw (Exception. "Bytes left over after decoding frame.")))
 	val))))
 
+(defn- decoder [frame]
+  (let [codec (compile-frame frame)]
+    (fn [buf-seq]
+      (when-not (empty? buf-seq)
+        (let [[success & rest] (read-bytes codec buf-seq)]
+          (when-not success
+            (throw (Exception. "Bytes left over after decoding sequence of frames.")))
+          rest)))))
+
 (defn decode-all
   "Turns bytes into a sequence of frame values.  If there are bytes left over at the end
    of the sequence, an exception is thrown."
   [frame bytes]
-  (let [codec (compile-frame frame)]
+  (let [decode-next (decoder frame)]
     (binding [complete? true]
-      (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))]
-	(loop [buf-seq buf-seq, vals []]
-	  (if (empty? buf-seq)
-	    vals
-	    (let [[success val remainder] (read-bytes codec buf-seq)]
-	      (when-not success
-		(throw (Exception. "Bytes left over after decoding sequence of frames.")))
-	      (recur remainder (conj vals val)))))))))
+      (loop [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
+             vals    []]
+        (if-let [[val remainder] (decode-next buf-seq)]
+          (recur remainder (conj vals val))
+          vals)))))
+
+(defn lazy-decode-all
+  "Turns bytes into a lazy sequence of frame values.  If there are bytes left over at the
+   end of the sequence, an exception is thrown."
+  [frame bytes]
+  (let [decode-next (decoder frame)]
+    ((fn decode-rest [buf-seq]
+       (lazy-seq
+         (binding [complete? true]
+           (when-let [[val remainder] (decode-next buf-seq)]
+             (cons val (decode-rest remainder))))))
+     (bytes/dup-bytes (to-buf-seq bytes)))))
 
 (defn- decode-byte-sequence [codecs buf-seq]
   (if (empty? buf-seq)
