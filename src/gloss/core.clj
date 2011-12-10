@@ -22,7 +22,7 @@
 
 ;;;
 
-(import-fn #'structure/compile-frame)
+(import-fn structure/compile-frame)
 
 (defmacro defcodec
   "Defines a compiled frame."
@@ -34,7 +34,7 @@
   [name frame]
   `(defcodec ^{:private true} ~name ~frame))
 
-(import-fn #'protocols/sizeof)
+(import-fn protocols/sizeof)
 
 (defn byte-count
   "Returns the number of bytes in the value.  Compatible with any data structure that can
@@ -44,7 +44,7 @@
 
 ;;;
 
-(import-fn #'bytes/bit-seq)
+(import-fn bytes/bit-seq)
 
 (defn bit-map
   "Defines an ordered map of signed integers with the specified bit-lengths.  The sum of
@@ -60,8 +60,8 @@
 
 ;;;
 
-(import-fn #'codecs/enum)
-(import-fn #'codecs/ordered-map)
+(import-fn codecs/enum)
+(import-fn codecs/ordered-map)
 
 (defn delimited-block
   "Defines a frame which is just a byte sequence terminated by one or more delimiters.

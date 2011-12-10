@@ -20,23 +20,23 @@
      SingleBufferSequence
      MultiBufferSequence]))
 
-(import-fn #'core/create-buf-seq)
-(import-fn #'core/duplicate)
+(import-fn core/create-buf-seq)
+(import-fn core/duplicate)
 
-(import-fn #'core/byte-count)
-(import-fn #'core/dup-bytes)
-(import-fn #'core/take-bytes)
-(import-fn #'core/drop-bytes)
-(import-fn #'core/take-contiguous-bytes)
-(import-fn #'core/rewind-bytes)
-(import-fn #'core/duplicate)
-(import-fn #'core/concat-bytes)
+(import-fn core/byte-count)
+(import-fn core/dup-bytes)
+(import-fn core/take-bytes)
+(import-fn core/drop-bytes)
+(import-fn core/take-contiguous-bytes)
+(import-fn core/rewind-bytes)
+(import-fn core/duplicate)
+(import-fn core/concat-bytes)
 
-(import-fn #'delimited/delimited-codec)
-(import-fn #'delimited/wrap-delimited-sequence)
-(import-fn #'delimited/delimited-bytes-codec)
+(import-fn delimited/delimited-codec)
+(import-fn delimited/wrap-delimited-sequence)
+(import-fn delimited/delimited-bytes-codec)
 
-(import-fn #'bits/bit-seq)
+(import-fn bits/bit-seq)
 
 (defn single-buffer? [x]
   (instance? SingleBufferSequence x))

@@ -25,8 +25,8 @@
 
 ;;;
 
-(import-fn #'formats/to-byte-buffer)
-(import-fn #'formats/to-buf-seq)
+(import-fn formats/to-byte-buffer)
+(import-fn formats/to-buf-seq)
 
 (defn ^ByteBuffer contiguous
   "Takes a sequence of ByteBuffers and returns a single contiguous ByteBuffer."
