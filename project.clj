@@ -8,5 +8,5 @@
                  [potemkin "0.1.1"]]
   :multi-deps {:all [[lamina "0.4.1-SNAPSHOT"]
                      [potemkin "0.1.1"]]
-               "1.2" [org.clojure/clojure "1.2.1"]}
+               "1.2" [[org.clojure/clojure "1.2.1"]]}
   :jvm-opts ["-server"])

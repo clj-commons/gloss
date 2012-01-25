@@ -29,8 +29,13 @@
        %)
     x))
 
+(defmacro big-int? [x]
+  (if (= 2 (:minor *clojure-version*))
+    false
+    `(instance? clojure.lang.BigInt ~x)))
+
 (defn normalize-number [x]
-  (if (instance? clojure.lang.BigInt x)
+  (if (big-int? x)
     x
     (double x)))
 
