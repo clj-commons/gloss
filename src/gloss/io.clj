@@ -40,8 +40,7 @@
   "Turns a frame value into a sequence of ByteBuffers."
   [frame val]
   (let [codec (compile-frame frame)]
-    (when val
-      (write-bytes codec nil val))))
+    (write-bytes codec nil val)))
 
 (defn encode-to-buffer
   "Encodes a sequence of values, and writes them to a ByteBuffer."
