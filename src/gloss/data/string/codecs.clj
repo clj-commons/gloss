@@ -50,7 +50,8 @@
   (reify
     Reader
     (read-bytes [this buf-seq]
-      (let [decoder (create-decoder charset)]
+      (let [buf-seq (to-buf-seq buf-seq)
+            decoder (create-decoder charset)]
 	(if (and (single-buffer? buf-seq) complete?)
 	  [true (.decode decoder (.duplicate ^ByteBuffer (first buf-seq))) nil]
 	  (let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
