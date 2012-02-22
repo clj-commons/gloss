@@ -150,7 +150,7 @@
 	(read-bytes [this b]
 	  (let [len (byte-count b)
 		available (- len suffix-length)]
-	    (if (pos? available)
+	    (if (<= 0 available)
 	      (let [[success x remainder] (read-bytes codec (take-bytes (dup-bytes b) available))]
 		(if success
 		  [true x (concat-bytes

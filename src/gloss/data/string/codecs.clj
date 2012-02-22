@@ -55,7 +55,7 @@
 	  [true (.decode decoder (.duplicate ^ByteBuffer (first buf-seq))) nil]
 	  (let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
 	    (if (empty? chars)
-	      [false this buf-seq]
+	      [true "" bytes]
 	      [true (create-char-sequence chars) bytes])))))
     Writer
     (sizeof [_]
