@@ -70,34 +70,34 @@
      Reader
      (read-bytes [this# b#]
        (if (< (byte-count b#) ~size)
-	 [false this# b#]
-	 (let [first-buf# (first b#)
-	       remaining# (.remaining ^Buffer first-buf#)]
-	   (cond
-	     (= ~size remaining#)
-	     [true
-	      (~get-transform (~accessor ^ByteBuffer first-buf#))
-	      (rest b#)]
-	     
-	     (< ~size remaining#)
-	     [true
-	      (~get-transform (~accessor ^ByteBuffer first-buf#))
-	      (-> b# rewind-bytes (drop-bytes ~size))]
-	     
-	     :else
-	     (let [buf# (take-contiguous-bytes b# ~size)]
-	       [true
-		(~get-transform (~accessor ^ByteBuffer buf#))
-		(drop-bytes b# ~size)])))))
+         [false this# b#]
+         (let [first-buf# (first b#)
+               remaining# (.remaining ^Buffer first-buf#)]
+           (cond
+             (= ~size remaining#)
+             [true
+              (~get-transform (~accessor ^ByteBuffer first-buf#))
+              (rest b#)]
+
+             (< ~size remaining#)
+             [true
+              (~get-transform (~accessor ^ByteBuffer first-buf#))
+              (-> b# rewind-bytes (drop-bytes ~size))]
+
+             :else
+             (let [buf# (take-contiguous-bytes b# ~size)]
+               [true
+                (~get-transform (~accessor ^ByteBuffer buf#))
+                (drop-bytes b# ~size)])))))
      Writer
      (sizeof [_]
        ~size)
      (write-bytes [_ buf# v#]
        (with-buffer [buf# ~size]
-	 (~writer ^ByteBuffer buf# (~typecast (~put-transform v#)))))))
+         (~writer ^ByteBuffer buf# (~typecast (~put-transform v#)))))))
 
 (def primitive-codecs
-  {:byte (primitive-codec .get .put 1 identity byte to-byte) 
+  {:byte (primitive-codec .get .put 1 identity byte to-byte)
    :int16 (primitive-codec .getShort .putShort 2 identity short identity)
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
    :int64 (primitive-codec .getLong .putLong 8 identity long identity)
