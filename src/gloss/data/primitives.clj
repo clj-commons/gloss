@@ -66,19 +66,20 @@
   (.longValue (bigint x)))
 
 (def byte-order
-  {:le ByteOrder/LITTLE_ENDIAN
-   :be ByteOrder/BIG_ENDIAN
-   :ne (ByteOrder/nativeOrder)})
+  {:le `ByteOrder/LITTLE_ENDIAN
+   :be `ByteOrder/BIG_ENDIAN
+   :ne `(ByteOrder/nativeOrder)})
 
 (defmacro with-byte-order [[buf bo] & body]
   (if (nil? bo)
     `(do ~@body)
-    `(let [^ByteBuffer buf# ~buf, obo# (.order buf#)]
+    `(let [^ByteBuffer buf# ~buf
+           obo# (.order buf#)]
        (try
-         (.order buf# (byte-order ~bo))
+         (.order buf# ~(byte-order bo))
          ~@body
          (finally
-          (.order buf# obo#))))))
+           (.order buf# obo#))))))
 
 (defmacro primitive-codec
   [accessor writer size get-transform typecast put-transform & optional]
@@ -119,24 +120,37 @@
 
 (def primitive-codecs
   {:byte (primitive-codec .get .put 1 identity byte to-byte)
+
    :int16 (primitive-codec .getShort .putShort 2 identity short identity)
    :int16-le (primitive-codec .getShort .putShort 2 identity short identity :le)
    :int16-be (primitive-codec .getShort .putShort 2 identity short identity :be)
+
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
    :int32-le (primitive-codec .getInt .putInt 4 identity int identity :le)
    :int32-be (primitive-codec .getInt .putInt 4 identity int identity :be)
+
    :int64 (primitive-codec .getLong .putLong 8 identity long identity)
    :int64-le (primitive-codec .getLong .putLong 8 identity long identity :le)
    :int64-be (primitive-codec .getLong .putLong 8 identity long identity :be)
+
    :float32 (primitive-codec .getFloat .putFloat 4 identity float identity)
+   :float32-le (primitive-codec .getFloat .putFloat 4 identity float identity :le)
+   :float32-be (primitive-codec .getFloat .putFloat 4 identity float identity :be)
+   
    :float64 (primitive-codec .getDouble .putDouble 8 identity double identity)
+   :float64-le (primitive-codec .getDouble .putDouble 8 identity double identity :le)
+   :float64-be (primitive-codec .getDouble .putDouble 8 identity double identity :be)
+
    :ubyte (primitive-codec .get .put 1 byte->ubyte byte ubyte->byte)
+
    :uint16 (primitive-codec .getShort .putShort 2 short->ushort short ushort->short)
    :uint16-le (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :le)
    :uint16-be (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
+
    :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
    :uint32-le (primitive-codec .getInt .putInt 4 int->uint int uint->int :le)
    :uint32-be (primitive-codec .getInt .putInt 4 int->uint int uint->int :be)
+
    :uint64 (primitive-codec .getLong .putLong 8 long->ulong long ulong->long)
    :uint64-le (primitive-codec .getLong .putLong 8 long->ulong long ulong->long :le)
    :uint64-be (primitive-codec .getLong .putLong 8 long->ulong long ulong->long :be)})

@@ -114,10 +114,10 @@
 
 (deftest test-lists
   (test-roundtrip
-    [:float32 :float32]
+    [:float32-be :float32-le]
     [1 2])
   (test-roundtrip
-    [:ubyte :uint16 :uint32 :uint64]
+    [:ubyte :uint16-le :uint32 :uint64-be]
     [0xFF 0xFFFF 0xFFFFFFFF 0xFFFFFFFFFFFFFFFF])
   (test-roundtrip
     [:a :byte :float64 :b]
