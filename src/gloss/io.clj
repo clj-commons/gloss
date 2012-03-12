@@ -81,14 +81,14 @@
 	    [success val remainder] (read-bytes codec buf-seq)]
 	(when-not success
 	  (throw (Exception. "Insufficient bytes to decode frame.")))
-	(when-not (empty? remainder)
+	(when-not (zero? (bytes/byte-count remainder))
 	  (throw (Exception. "Bytes left over after decoding frame.")))
 	val))))
 
 (defn- decoder [frame]
   (let [codec (compile-frame frame)]
     (fn [buf-seq]
-      (when-not (empty? buf-seq)
+      (when-not (zero? (bytes/byte-count buf-seq))
         (let [[success & rest] (read-bytes codec buf-seq)]
           (when-not success
             (throw (Exception. "Bytes left over after decoding sequence of frames.")))
@@ -125,7 +125,7 @@
 	[[x] (rest codecs) remainder]
 	[nil (cons x (rest codecs)) remainder]))
     (loop [buf-seq buf-seq, vals [], codecs codecs]
-      (if (or (empty? codecs) (empty? buf-seq))
+      (if (or (empty? codecs) (zero? (bytes/byte-count buf-seq)))
 	[vals codecs buf-seq]
 	(let [[success x remainder] (read-bytes (first codecs) buf-seq)]
 	  (if success
@@ -147,7 +147,7 @@
 	  (fn [bytes]
 	    (binding [complete? (drained? src)]
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		    [s codecs remainder] (when-not (empty? bytes)
+		    [s codecs remainder] (when-not (zero? (bytes/byte-count bytes))
 					   (decode-byte-sequence
 					     (:codecs state)
 					     (bytes/concat-bytes (:bytes state) bytes)))]
