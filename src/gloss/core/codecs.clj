@@ -180,10 +180,10 @@
   (let [n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
 	       (let [m (first map-or-seq)]
 		 (zipmap
-		   (map int (vals m))
+		   (map long (vals m))
 		   (keys m)))
 	       (zipmap
-		 (map int (range (count map-or-seq)))
+		 (map long (range (count map-or-seq)))
 		 map-or-seq))
 	v->n (zipmap (vals n->v) (keys n->v))
 	codec (primitive-codecs primitive-type)]
@@ -192,7 +192,7 @@
       (read-bytes [this b]
 	(let [[success x b] (read-bytes codec b)]
 	  (if success
-	    [true (n->v (int x)) b]
+	    [true (n->v (long x)) b]
 	    [false this b])))
       Writer
       (sizeof [_]
