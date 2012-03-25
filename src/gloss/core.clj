@@ -267,3 +267,16 @@
       (codecs/wrap-prefixed-sequence
 	(or (compile-frame (:prefix options)) (:int32 primitive-codecs))
 	codec))))
+
+(defn default
+  [frame default-value]
+  (let [codec (compile-frame frame)]
+    (reify
+      Reader
+      (read-bytes [_ b]
+        (read-bytes codec b))
+      Writer
+      (sizeof [_]
+        (sizeof codec))
+      (write-bytes [_ buf vs]
+        (write-bytes codec buf (or vs default-value))))))

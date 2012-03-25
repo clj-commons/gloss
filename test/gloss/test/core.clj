@@ -298,3 +298,32 @@
 	dec)
       (string :utf-8 :suffix ","))
     "abc"))
+
+(deftest test-default-values
+  (letfn [(test-default [codec before after]
+            (is= (decode codec (encode codec before))
+                 after))]
+    (test-default {:a :byte :b (default :byte 7)}
+                  {:a 3}
+                  {:a 3 :b 7})
+    (let [complex {:a :byte :b (default (repeated :int32 :prefix :none) [1 2 3])}]
+      (test-default complex
+                    {:a 5}
+                    {:a 5 :b [1 2 3]})
+      (test-default complex
+                    {:a 8 :b [4 5 6]}
+                    {:a 8 :b [4 5 6]}))
+    (let [complex-str {:a :byte :b (default (string :utf-8) "def")}]
+      (test-default complex-str
+                    {:a 9}
+                    {:a 9 :b "def"})
+      (test-default complex-str
+                    {:a 9 :b "string"}
+                    {:a 9 :b "string"}))
+    (let [plain-str (default (string :utf-8) "def")]
+      (test-default plain-str
+                    nil
+                    "def")
+      (test-default plain-str
+                    "string"
+                    "string"))))
