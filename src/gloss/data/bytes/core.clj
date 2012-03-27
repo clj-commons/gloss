@@ -170,7 +170,7 @@
 	      (if (>= offset n)
 		(ByteBuffer/wrap ary)
 		(let [buf ^ByteBuffer (first bytes)
-		      num-bytes (min (.remaining buf) (- n offset))]
+		      num-bytes (long (min (.remaining buf) (- n offset)))]
 		  (-> buf duplicate (.get ary offset num-bytes))
 		  (recur (+ offset num-bytes) (rest bytes))))))))))
 
