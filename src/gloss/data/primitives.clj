@@ -47,7 +47,8 @@
 
 (defn long->ulong
   [x]
-  (bigint (BigInteger. 1 (long->byte-array x))))
+  (let [^bytes magnitude (long->byte-array x)]
+    (bigint (BigInteger. 1 magnitude))))
 
 (defn ubyte->byte
   [x]
