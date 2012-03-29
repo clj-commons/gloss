@@ -136,12 +136,11 @@
   "Given a channel that emits bytes, returns a channel that emits decoded frames whenever
    there are sufficient bytes."
   [src frame]
-  (let [src (copy src)
-	dst (channel)
+  (let [dst (channel)
 	codec (compile-frame frame)]
     (on-closed dst #(close src))
     (run-pipeline {:codecs (repeat codec) :bytes nil}
-      :error-handler (fn [_] (close dst))
+      {:error-handler (fn [_] (close dst))}
       (fn [state]
 	(run-pipeline (read-channel src)
 	  (fn [bytes]
@@ -159,7 +158,7 @@
       (fn [x]
 	(when-not (drained? src)
 	  (restart x))))
-    (splice dst nil-channel)))
+    (splice dst (grounded-channel))))
 
 (defn decode-channel-headers
   "Given a channel that emits bytes, returns a channel that will emit one decoded frame for
@@ -192,4 +191,4 @@
 
 	  (not (drained? src))
 	  (restart state))))
-    (splice dst nil-channel)))
+    (splice dst (grounded-channel))))
