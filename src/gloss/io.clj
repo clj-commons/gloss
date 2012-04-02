@@ -142,7 +142,7 @@
     (run-pipeline {:codecs (repeat codec) :bytes nil}
       {:error-handler (fn [_] (close dst))}
       (fn [state]
-	(run-pipeline (read-channel* src :on-drained nil)
+	(run-pipeline (read-channel* src :on-drained [])
 	  (fn [bytes]
 	    (binding [complete? (drained? src)]
 	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
@@ -168,7 +168,7 @@
   (let [dst (channel)]
     (run-pipeline {:codecs (map compile-frame frames) :bytes nil}
       (fn [state]
-	(run-pipeline (read-channel src)
+	(run-pipeline (read-channel* src :on-drained [])
 	  (fn [bytes]
 	    (if (empty? (:codecs state))
 	      state
