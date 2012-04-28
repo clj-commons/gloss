@@ -213,7 +213,7 @@
     (enum :byte :a :b :c)
     :a)
   (test-roundtrip
-    (enum :int16 {:a 100 :b 1000})
+    (enum :int16 {:a 100 :b 1000 :c \c})
     :b))
 
 (deftest test-bit-seq
