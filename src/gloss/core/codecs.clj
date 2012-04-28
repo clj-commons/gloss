@@ -177,13 +177,16 @@
    (enum :int32 {:a 100, :b 200, :c 300})"
   [primitive-type & map-or-seq]
   (assert (primitive-codecs primitive-type))
-  (let [n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
+  (let [coerce #(if (char? %)
+                  (int %)
+                  (long %))
+        n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
 	       (let [m (first map-or-seq)]
 		 (zipmap
-		   (map long (vals m))
+		   (map coerce (vals m))
 		   (keys m)))
 	       (zipmap
-		 (map long (range (count map-or-seq)))
+		 (map coerce (range (count map-or-seq)))
 		 map-or-seq))
 	v->n (zipmap (vals n->v) (keys n->v))
 	codec (primitive-codecs primitive-type)]
@@ -192,7 +195,7 @@
       (read-bytes [this b]
 	(let [[success x b] (read-bytes codec b)]
 	  (if success
-	    [true (n->v (long x)) b]
+	    [true (n->v (coerce x)) b]
 	    [false this b])))
       Writer
       (sizeof [_]
