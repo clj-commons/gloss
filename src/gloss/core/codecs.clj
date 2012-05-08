@@ -178,7 +178,7 @@
   [primitive-type & map-or-seq]
   (assert (primitive-codecs primitive-type))
   (let [coerce #(if (char? %)
-                  (int %)
+                  (long (int %))
                   (long %))
         n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
 	       (let [m (first map-or-seq)]
