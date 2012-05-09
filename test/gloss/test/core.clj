@@ -214,7 +214,7 @@
     :a)
   (test-roundtrip
     (enum :int16 {:a 100 :b 1000 :c \c})
-    :b))
+    :c))
 
 (deftest test-bit-seq
   (test-roundtrip
