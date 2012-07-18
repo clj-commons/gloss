@@ -114,8 +114,8 @@
 
 (deftest test-lists
   (test-roundtrip
-    [:float32-be :float32-le]
-    [1 2])
+    [:float32-be nil-codec :float32-le]
+    [1 nil 2])
   (test-roundtrip
     [:ubyte :uint16-le :uint32 :uint64-be]
     [0xFF 0xFFFF 0xFFFFFFFF 0xFFFFFFFFFFFFFFFF])

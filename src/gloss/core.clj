@@ -63,6 +63,17 @@
 (import-fn codecs/enum)
 (import-fn codecs/ordered-map)
 
+(def nil-codec
+  (reify
+    Reader
+    (read-bytes [_ b]
+      [true nil b])
+    Writer
+    (sizeof [_]
+      nil)
+    (write-bytes [_ _ v]
+      )))
+
 (defn delimited-block
   "Defines a frame which is just a byte sequence terminated by one or more delimiters.
 
