@@ -63,7 +63,7 @@
 (import-fn codecs/enum)
 (import-fn codecs/ordered-map)
 
-(def nil-codec
+(def nil-frame
   (reify
     Reader
     (read-bytes [_ b]
