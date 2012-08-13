@@ -168,12 +168,15 @@
 	 (sizeof [_]
 	   nil)
 	 (write-bytes [_ _ v]
+       (println (format "delimited-bytes-codec write-bytes '%s'" v)) 
 	   (concat v [(duplicate (first delimiters))]))))))
 
 (defn delimited-codec
   ([delimiters codec]
      (delimited-codec delimiters true codec))
   ([delimiters strip-delimiters? codec]
+     (delimited-codec delimiters strip-delimiters? codec (fn [b d] (first d))))
+  ([delimiters strip-delimiters? codec bytes->delimiter]
      (let [delimiters (map duplicate delimiters)
 	   delimited-codec (compose-callback
 			     (delimited-bytes-codec delimiters strip-delimiters?)
@@ -197,7 +200,7 @@
 	       (with-buffer [buf (sizeof codec)]
 		 (write-bytes codec buf v))
 	       (write-bytes codec buf v))
-	     [(duplicate (first delimiters))]))))))
+	     [(duplicate (bytes->delimiter v delimiters))]))))))
 
 (defn wrap-delimited-sequence
   ([delimiters codec]

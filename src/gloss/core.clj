@@ -129,6 +129,9 @@
 		  {:char-sequence false}
 		  options)
 	charset (name charset)
+    bytes->delimiter (if (:encode-with options) 
+                       (:encode-with options)
+                       (fn [s delims] (first delims)))
 	suffix-length (if (:suffix options)
 			(-> options :suffix to-byte-buffer to-buf-seq byte-count)
 			0)]
@@ -145,7 +148,8 @@
 	      (map #(if (string? %) (.getBytes ^String % charset) %))
 	      (map to-byte-buffer))
 	    (get options :strip-delimiters? true)
-	    (string/string-codec charset))
+	    (string/string-codec charset)
+        bytes->delimiter)
 	  
 	  :else
 	  (string/string-codec charset))

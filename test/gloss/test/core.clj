@@ -231,7 +231,9 @@
                 "CMD" (compile-frame ["CMD" (string :utf-8 :delimiters ["\r\n"])])
                  "TERM" (compile-frame ["TERM"])))
         b->h (fn [body] (first body))
-        codec (compile-frame (header (string :utf-8 :delimiters [" " "\r\n"]) h->b b->h))
+        cmd->delim (fn [cmd delims] (if (= cmd "TERM") (second delims) (first delims)))
+        codec (compile-frame (header (string :utf-8 :delimiters [" " "\r\n"] :encode-with cmd->delim) 
+                                     h->b b->h))
         cmd (encode codec ["CMD" "TOKEN"])
         term (encode codec ["TERM"])]
     (println (format "encoded cmd '%s'" (frame-to-string cmd)))
@@ -239,7 +241,10 @@
     (println "decoded cmd " (decode codec cmd))
     (println "decoded term " (decode codec term))
     (is (= (frame-to-string cmd) "CMD TOKEN\r\n"))
-    (is (= (frame-to-string term) "TERM\r\n"))))
+    (is (= (frame-to-string term) "TERM\r\n"))
+    ;(test-roundtrip codec ["CMD" "TOKEN"])
+    ;(test-roundtrip codec ["TERM"])
+    ))
 
 (deftest test-enum
   (test-roundtrip
