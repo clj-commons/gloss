@@ -15,22 +15,6 @@
     [lamina core]
     [clojure test walk]))
 
-(declare buffer-to-string)
-(defn frame-to-string [f]
-  (apply str (concat 
-               (postwalk #(if (instance? java.nio.ByteBuffer %) 
-                            (buffer-to-string %)
-                            %) f))))
-
-(defn buffer-to-string [b]
-  (let [cap (.capacity b)]
-    (if (> cap 0)
-      (loop [len (.capacity b)
-             result ()]
-        (if (= 0 len)
-          (apply str (map #(str (char %)) result))
-          (recur (dec len) (conj result (.get b (dec len))))))
-      nil)))
 
 (defn convert-char-sequences [x]
   (postwalk
@@ -228,7 +212,7 @@
 (deftest test-multi-delimited-header
   (let [h->b (fn [head] 
                (case head
-                "CMD" (compile-frame ["CMD" (string :utf-8 :delimiters ["\r\n"])])
+                 "CMD" (compile-frame ["CMD" (string :utf-8 :delimiters ["\r\n"])])
                  "TERM" (compile-frame ["TERM"])))
         b->h (fn [body] (first body))
         cmd->delim (fn [cmd delims] (if (= cmd "TERM") (second delims) (first delims)))
@@ -236,15 +220,8 @@
                                      h->b b->h))
         cmd (encode codec ["CMD" "TOKEN"])
         term (encode codec ["TERM"])]
-    (println (format "encoded cmd '%s'" (frame-to-string cmd)))
-    (println (format "encoded term '%s'" (frame-to-string term)))
-    (println "decoded cmd " (decode codec cmd))
-    (println "decoded term " (decode codec term))
-    (is (= (frame-to-string cmd) "CMD TOKEN\r\n"))
-    (is (= (frame-to-string term) "TERM\r\n"))
-    ;(test-roundtrip codec ["CMD" "TOKEN"])
-    ;(test-roundtrip codec ["TERM"])
-    ))
+    (is (= (frame->string cmd) "CMD TOKEN\r\n"))
+    (is (= (frame->string term) "TERM\r\n"))))
 
 (deftest test-enum
   (test-roundtrip

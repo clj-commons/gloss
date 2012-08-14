@@ -9,6 +9,7 @@
 (ns gloss.core
   (:use
     potemkin
+    [clojure.walk]
     [gloss.core.protocols :exclude (sizeof)]
     [gloss.data primitives]
     [gloss.core.formats :only (to-byte-buffer to-buf-seq)])
@@ -201,6 +202,24 @@
 	nil)
       (write-bytes [_ _ v]
 	(write-bytes codec nil (pad-number (str (double v)) options))))))
+
+(defn buf->string [b]
+  (let [cap (.capacity b)]
+    (if (> cap 0)
+      (loop [len (.capacity b)
+             result ()]
+        (if (= 0 len)
+          (apply str (map #(str (char %)) result))
+          (recur (dec len) (conj result (.get b (dec len))))))
+      nil)))
+
+(defn frame->string [f]
+  (apply str (concat 
+               (postwalk #(if (instance? java.nio.ByteBuffer %) 
+                            (buf->string %)
+                            %) f))))
+
+
 
 (defn header
   "A header is a frame which describes the frame that follows.  The decoded value
