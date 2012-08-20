@@ -11,7 +11,7 @@
     [gloss core io]
     [gloss.core.formats :only (to-char-buffer)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
-    [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes take-contiguous-bytes)]
+    [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes take-contiguous-bytes buf->string)]
     [lamina core]
     [clojure test walk]))
 
@@ -220,8 +220,8 @@
                                      h->b b->h))
         cmd (encode codec ["CMD" "TOKEN"])
         term (encode codec ["TERM"])]
-    (is (= (frame->string cmd) "CMD TOKEN\r\n"))
-    (is (= (frame->string term) "TERM\r\n"))))
+    (is (= (buf->string cmd) "CMD TOKEN\r\n"))
+    (is (= (buf->string term) "TERM\r\n"))))
 
 (deftest test-enum
   (test-roundtrip

@@ -36,14 +36,14 @@
 
 (defn buf->string [buf-seq]
   (let [buf-seq (dup-bytes (to-buf-seq buf-seq))]
-    (map
-      (fn [^ByteBuffer buf]
-	(->> #(.get buf)
-	  repeatedly
-	  (take (.remaining buf))
-	  map char
-	  apply str))
-      buf-seq)))
+    (apply str (map
+                 (fn [^ByteBuffer buf]
+                   (->> #(.get buf)
+                        repeatedly
+                        (take (.remaining buf))
+                        (map char)
+                        (apply str)))
+                 buf-seq))))
 
 (defn default-encode-with [buf delims]
   (first delims))
