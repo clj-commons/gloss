@@ -12,7 +12,7 @@
     [clojure.walk]
     [gloss.core.protocols :exclude (sizeof)]
     [gloss.data primitives]
-    [gloss.core.formats :only (to-byte-buffer to-buf-seq)])
+    [gloss.core.formats :only (to-byte-buffer to-buf-seq string-to-byte-buffer)])
   (:require
     [gloss.core.protocols :as protocols]
     [gloss.data.bytes :as bytes]
@@ -99,6 +99,7 @@
       (compile-frame prefix-or-len))
     (compile-frame frame)))
 
+
 (defn string
   "Defines a frame which contains a string.  The charset must be a keyword,
    such as :utf-8 or :ascii.  Available options are :length, :delimiters, :suffix,
@@ -130,9 +131,6 @@
 		  {:char-sequence false}
 		  options)
 	charset (name charset)
-    bytes->delimiter (if (:encode-with options) 
-                       (:encode-with options)
-                       (fn [s delims] (first delims)))
 	suffix-length (if (:suffix options)
 			(-> options :suffix to-byte-buffer to-buf-seq byte-count)
 			0)]
@@ -144,13 +142,16 @@
 	    (string/string-codec charset))
 	  
 	  (:delimiters options)
-	  (bytes/delimited-codec
-	    (->> (:delimiters options)
-	      (map #(if (string? %) (.getBytes ^String % charset) %))
-	      (map to-byte-buffer))
-	    (get options :strip-delimiters? true)
-	    (string/string-codec charset)
-        bytes->delimiter)
+      (let [delimiters (:delimiters options)
+            bytes->delimiter (if (:encode-with options)
+                               (:encode-with options)
+                               (fn [v] (first delimiters)))]
+      
+        (bytes/delimited-codec
+          (string-to-byte-buffer (:delimiters options) charset)
+          (get options :strip-delimiters? true)
+          (string/string-codec charset)
+          #(string-to-byte-buffer (bytes->delimiter %) charset)))
 	  
 	  :else
 	  (string/string-codec charset))

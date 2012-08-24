@@ -49,3 +49,10 @@
     (if (instance? CharBuffer x)
       x
       (CharBuffer/wrap ^CharSequence x))))
+
+(defn string-to-byte-buffer
+  ([s charset] 
+   (->> s
+        (map #(if (string? %) (.getBytes ^String % charset) %))
+        (map to-byte-buffer)))
+  ([s] (string-to-byte-buffer s "utf-8")))
