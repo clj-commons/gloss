@@ -145,7 +145,7 @@
       (let [delimiters (:delimiters options)
             bytes->delimiter (if (:encode-with options)
                                (:encode-with options)
-                               (fn [v] (first delimiters)))]
+                               (fn [v] delimiters))]
       
         (bytes/delimited-codec
           (string-to-byte-buffer (:delimiters options) charset)

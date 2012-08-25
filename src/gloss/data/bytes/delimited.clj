@@ -45,10 +45,6 @@
                         (apply str)))
                  buf-seq))))
 
-
-(defn default-encode-with [delims buf]
-  (first (string-to-byte-buffer delims)))
-
 (defn split-buf-seq [buf-seq min-delimiter-length max-delimiter-length]
   (let [buf-seq (dup-bytes buf-seq)
 	offset (dec max-delimiter-length)
@@ -174,6 +170,9 @@
 	 (write-bytes [_ _ v]
 	   (concat v [(duplicate (first delimiters))]))))))
 
+(defn default-encode-with [delims buf]
+  delims)
+
 (defn delimited-codec
   ([delimiters codec]
      (delimited-codec delimiters true codec))
@@ -203,7 +202,7 @@
 	       (with-buffer [buf (sizeof codec)]
 		 (write-bytes codec buf v))
 	       (write-bytes codec buf v))
-	     [(duplicate (bytes->delimiter v))]))))))
+	     [(duplicate (first (bytes->delimiter v)))]))))))
 
 (defn wrap-delimited-sequence
   ([delimiters codec]
