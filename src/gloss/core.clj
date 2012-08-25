@@ -113,6 +113,10 @@
 
    (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])
 
+   By specifying :encode-with you can selectively encode a string:
+
+   (string :utf-8 :delimiters [\"\\r\\n\" \" \"] :encode-with (fn [v] (if (= v \"END\")  [\"\\r\\n\"] [\" \"])))
+
    If a string is already bounded in length, but has a terminating sequence, use :suffix
 
    (string :utf-8, :length 3, :suffix \"\\r\\n\")
