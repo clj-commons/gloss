@@ -11,7 +11,7 @@
     potemkin
     [gloss.core.protocols :exclude (sizeof)]
     [gloss.data primitives]
-    [gloss.core.formats :only (to-byte-buffer to-buf-seq)])
+    [gloss.core.formats :only (to-byte-buffer to-buf-seq string-to-byte-buffer)])
   (:require
     [gloss.core.protocols :as protocols]
     [gloss.data.bytes :as bytes]
@@ -98,6 +98,7 @@
       (compile-frame prefix-or-len))
     (compile-frame frame)))
 
+
 (defn string
   "Defines a frame which contains a string.  The charset must be a keyword,
    such as :utf-8 or :ascii.  Available options are :length, :delimiters, :suffix,
@@ -110,6 +111,10 @@
    A string with :delimiters specified is terminated by one or more delimiters:
 
    (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])
+
+   By specifying :value->delimiter you can selectively delimit a value when encoding:
+
+   (string :utf-8 :delimiters [\"\\r\\n\" \" \"] :value->delimiter (fn [v] (if (= v \"END\")  [\"\\r\\n\"] [\" \"])))
 
    If a string is already bounded in length, but has a terminating sequence, use :suffix
 
@@ -140,12 +145,16 @@
 	    (string/string-codec charset))
 	  
 	  (:delimiters options)
-	  (bytes/delimited-codec
-	    (->> (:delimiters options)
-	      (map #(if (string? %) (.getBytes ^String % charset) %))
-	      (map to-byte-buffer))
-	    (get options :strip-delimiters? true)
-	    (string/string-codec charset))
+      (let [delimiters (:delimiters options)
+            bytes->delimiter (if (:value->delimiter options)
+                               (:value->delimiter options)
+                               (fn [v] delimiters))]
+      
+        (bytes/delimited-codec
+          (string-to-byte-buffer (:delimiters options) charset)
+          (get options :strip-delimiters? true)
+          (string/string-codec charset)
+          #(string-to-byte-buffer (bytes->delimiter %) charset)))
 	  
 	  :else
 	  (string/string-codec charset))

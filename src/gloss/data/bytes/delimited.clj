@@ -36,14 +36,14 @@
 
 (defn buf->string [buf-seq]
   (let [buf-seq (dup-bytes (to-buf-seq buf-seq))]
-    (map
-      (fn [^ByteBuffer buf]
-	(->> #(.get buf)
-	  repeatedly
-	  (take (.remaining buf))
-	  map char
-	  apply str))
-      buf-seq)))
+    (apply str (map
+                 (fn [^ByteBuffer buf]
+                   (->> #(.get buf)
+                        repeatedly
+                        (take (.remaining buf))
+                        (map char)
+                        (apply str)))
+                 buf-seq))))
 
 (defn split-buf-seq [buf-seq min-delimiter-length max-delimiter-length]
   (let [buf-seq (dup-bytes buf-seq)
@@ -170,10 +170,15 @@
 	 (write-bytes [_ _ v]
 	   (concat v [(duplicate (first delimiters))]))))))
 
+(defn default-value->delimiter [delims buf]
+  delims)
+
 (defn delimited-codec
   ([delimiters codec]
      (delimited-codec delimiters true codec))
   ([delimiters strip-delimiters? codec]
+     (delimited-codec delimiters strip-delimiters? codec (partial default-value->delimiter delimiters)))
+  ([delimiters strip-delimiters? codec bytes->delimiter]
      (let [delimiters (map duplicate delimiters)
 	   delimited-codec (compose-callback
 			     (delimited-bytes-codec delimiters strip-delimiters?)
@@ -197,7 +202,7 @@
 	       (with-buffer [buf (sizeof codec)]
 		 (write-bytes codec buf v))
 	       (write-bytes codec buf v))
-	     [(duplicate (first delimiters))]))))))
+	     [(duplicate (first (bytes->delimiter v)))]))))))
 
 (defn wrap-delimited-sequence
   ([delimiters codec]
