@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [lamina "0.5.0-beta1"]
                  [potemkin "0.1.5"]]
+  :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :multi-deps {:all [[lamina "0.5.0-beta1"]
                      [potemkin "0.1.5"]]
 			   "master" [[org.clojure/clojure "1.5.0-master-SNAPSHOT"]]

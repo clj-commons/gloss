@@ -35,6 +35,7 @@
 (import-fn delimited/delimited-codec)
 (import-fn delimited/wrap-delimited-sequence)
 (import-fn delimited/delimited-bytes-codec)
+(import-fn delimited/buf->string)
 
 (import-fn bits/bit-seq)
 
