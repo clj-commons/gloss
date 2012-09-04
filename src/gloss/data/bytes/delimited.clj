@@ -170,14 +170,14 @@
 	 (write-bytes [_ _ v]
 	   (concat v [(duplicate (first delimiters))]))))))
 
-(defn default-encode-with [delims buf]
+(defn default-value->delimiter [delims buf]
   delims)
 
 (defn delimited-codec
   ([delimiters codec]
      (delimited-codec delimiters true codec))
   ([delimiters strip-delimiters? codec]
-     (delimited-codec delimiters strip-delimiters? codec (partial default-encode-with delimiters)))
+     (delimited-codec delimiters strip-delimiters? codec (partial default-value->delimiter delimiters)))
   ([delimiters strip-delimiters? codec bytes->delimiter]
      (let [delimiters (map duplicate delimiters)
 	   delimited-codec (compose-callback

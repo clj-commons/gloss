@@ -216,7 +216,7 @@
                  "TERM" (compile-frame ["TERM"])))
         b->h (fn [body] (first body))
         cmd->delim (fn [cmd] (if (= cmd "TERM") ["\r\n"] [" "]))
-        codec (compile-frame (header (string :utf-8 :delimiters [" " "\r\n"] :encode-with cmd->delim) 
+        codec (compile-frame (header (string :utf-8 :delimiters [" " "\r\n"] :value->delimiter cmd->delim) 
                                      h->b b->h))
         cmd (encode codec ["CMD" "TOKEN"])
         term (encode codec ["TERM"])]

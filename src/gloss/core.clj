@@ -113,9 +113,9 @@
 
    (string :utf-8 :delimiters [\"\\r\\n\" \"\\r\"])
 
-   By specifying :encode-with you can selectively encode a string:
+   By specifying :value->delimiter you can selectively delimit a value when encoding:
 
-   (string :utf-8 :delimiters [\"\\r\\n\" \" \"] :encode-with (fn [v] (if (= v \"END\")  [\"\\r\\n\"] [\" \"])))
+   (string :utf-8 :delimiters [\"\\r\\n\" \" \"] :value->delimiter (fn [v] (if (= v \"END\")  [\"\\r\\n\"] [\" \"])))
 
    If a string is already bounded in length, but has a terminating sequence, use :suffix
 
@@ -147,8 +147,8 @@
 	  
 	  (:delimiters options)
       (let [delimiters (:delimiters options)
-            bytes->delimiter (if (:encode-with options)
-                               (:encode-with options)
+            bytes->delimiter (if (:value->delimiter options)
+                               (:value->delimiter options)
                                (fn [v] delimiters))]
       
         (bytes/delimited-codec
