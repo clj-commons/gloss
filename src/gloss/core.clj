@@ -9,7 +9,6 @@
 (ns gloss.core
   (:use
     potemkin
-    [clojure.walk]
     [gloss.core.protocols :exclude (sizeof)]
     [gloss.data primitives]
     [gloss.core.formats :only (to-byte-buffer to-buf-seq string-to-byte-buffer)])
