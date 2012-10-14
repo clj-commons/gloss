@@ -11,7 +11,7 @@ h2. Dependency for Leiningen Projects
 To add Gloss as a dependency to your "Leiningen":http://leiningen.org project, use:
 
 <code>
-["gloss" "0.2.1"]
+[gloss "0.2.1"]
 </code>
 
 h2. Documentation
