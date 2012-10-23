@@ -191,4 +191,4 @@
 
 	  (not (drained? src))
 	  (restart state))))
-    (splice dst (grounded-channel))))
+    (splice dst (closed-channel))))
