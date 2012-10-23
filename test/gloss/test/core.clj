@@ -70,11 +70,11 @@
 
 (defn test-stream-roundtrip [split-fn frame val]
   (let [ch (decode-channel (split-channel split-fn frame val) frame)]
-    (let [s (convert-result (channel-seq ch))]
+    (let [s (convert-result (channel->seq ch))]
       (is= [val val] s)))
   (let [ch (decode-channel-headers (split-channel split-fn frame val) frame)
 	v1 (wait-for-message ch)
-	v2 (->> (decode-channel ch frame) channel-seq)]
+	v2 (->> (decode-channel ch frame) channel->seq)]
     (let [s (convert-result (cons v1 v2))]
       (is= [val val] s))))
 
