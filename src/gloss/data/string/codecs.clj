@@ -28,7 +28,8 @@
     (loop [chars [char-buf], bytes buf-seq]
       (if (empty? bytes)
 	[(rewind-chars chars) nil]
-	(let [first-buf ^ByteBuffer (first bytes)
+	(let [bytes (to-buf-seq bytes)
+              first-buf ^ByteBuffer (first bytes)
 	      result (-> decoder (.decode first-buf (last chars) false))]
 	  (cond
 
@@ -40,8 +41,8 @@
 	      [(rewind-chars chars) bytes]
 	      (recur chars
 		(cons
-		  (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
-		  (drop-bytes (rest bytes) 1))))
+                  (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
+                  (drop-bytes (rest bytes) 1))))
 
 	    :else
 	    (recur chars (rest bytes))))))))
