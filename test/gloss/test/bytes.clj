@@ -20,20 +20,40 @@
       (when (.hasRemaining buf)
 	(cons (.get buf) (byte-seq buf))))))
 
+(defn- gen-test-bufs []
+  [;; single buffer
+   (to-buf-seq (to-byte-buffer (range 100)))
+   ;; single buffer - non-zero position
+   (to-buf-seq (.position (to-byte-buffer (range -2 100)) 2))
+   ;; multi buffer
+   (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))
+   ;; multi buffer - non-zero position
+   (to-buf-seq (map #(.position (to-byte-buffer %) 2)
+                    (partition 7 5 (range -2 100))))])
+
 (deftest test-drop-bytes
-  (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
+  (let [[buf buf-pos bufs bufs-pos] (gen-test-bufs)]
     (dotimes [i 101]
-      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes bufs i)))))))
+      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes buf i))))
+      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes buf-pos i))))
+      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes bufs i))))
+      (is (= (drop i (range 100)) (mapcat byte-seq (drop-bytes bufs-pos i)))))))
 
 (deftest test-take-bytes
-  (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
+  (let [[buf buf-pos bufs bufs-pos] (gen-test-bufs)]
     (dotimes [i 101]
-      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes bufs i)))))))
+      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes buf i))))
+      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes buf-pos i))))
+      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes bufs i))))
+      (is (= (take i (range 101)) (mapcat byte-seq (take-bytes bufs-pos i)))))))
 
 (deftest test-take-contiguous-bytes
-  (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
+  (let [[buf buf-pos bufs bufs-pos] (gen-test-bufs)]
     (dotimes [i 101]
-      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes bufs i)))))))
+      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes buf i))))
+      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes buf-pos i))))
+      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes bufs i))))
+      (is (= (take i (range 100)) (byte-seq (take-contiguous-bytes bufs-pos i)))))))
 
 (defn- test-split [split-location skip-bytes source split]
   (let [s (mapcat byte-seq source)

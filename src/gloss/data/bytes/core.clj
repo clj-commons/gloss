@@ -211,7 +211,8 @@
       this
       
       (< n byte-count)
-      (SingleBufferSequence. (-> buffer duplicate (position n) slice) (- byte-count n))
+      (SingleBufferSequence. (-> buffer duplicate (position (+ n (position buffer))) slice)
+                             (- byte-count n))
 
       :else
       nil))
@@ -231,7 +232,7 @@
       nil
 
       (<= n byte-count)
-      (-> buffer duplicate (limit (min byte-count n)) slice)))
+      (-> buffer duplicate (limit (+ (position buffer) (min byte-count n))) slice)))
   (concat-bytes- [_ bufs]
     (create-buf-seq (cons buffer bufs))))
 
