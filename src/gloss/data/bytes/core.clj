@@ -236,10 +236,10 @@
       empty-buffer
 
       (< n byte-count)
-      (-> buffer duplicate (limit (+ (position buffer) (min byte-count n))) slice)
+      (-> buffer duplicate (limit (+ (position buffer) n)) slice)
 
       :else
-      buffer))
+      (duplicate buffer)))
   (concat-bytes- [_ bufs]
     (create-buf-seq (cons buffer bufs))))
 
