@@ -160,7 +160,6 @@
 
   (take-contiguous-bytes- [this n]
     (let [n (min byte-count n)
-	  buf-seq (map duplicate buf-seq)
 	  first-buf ^ByteBuffer (first buf-seq)]
       (if (> (.remaining first-buf) n)
 	(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
