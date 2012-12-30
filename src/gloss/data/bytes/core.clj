@@ -73,6 +73,8 @@
 
 ;;;
 
+(def empty-buffer (ByteBuffer/allocate 0))
+
 (deftype MultiBufferSequence [buf-seq byte-count]
   clojure.lang.Sequential
   clojure.lang.Seqable
@@ -159,19 +161,21 @@
 		  accumulator))))))))
 
   (take-contiguous-bytes- [this n]
-    (let [n (min byte-count n)
-	  first-buf ^ByteBuffer (first buf-seq)]
-      (if (> (.remaining first-buf) n)
-	(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
-	(when (and (pos? n) (<= n byte-count))
-	  (let [ary (byte-array n)]
-	    (loop [offset 0, bytes buf-seq]
-	      (if (>= offset n)
-		(ByteBuffer/wrap ary)
-		(let [buf ^ByteBuffer (first bytes)
-		      num-bytes (long (min (.remaining buf) (- n offset)))]
-		  (-> buf duplicate (.get ary offset num-bytes))
-		  (recur (+ offset num-bytes) (rest bytes))))))))))
+    (if (not (pos? n))
+      empty-buffer
+      (let [n (min byte-count n)
+            first-buf ^ByteBuffer (first buf-seq)]
+        (if (> (.remaining first-buf) n)
+          (-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
+          (when (and (pos? n) (<= n byte-count))
+            (let [ary (byte-array n)]
+              (loop [offset 0, bytes buf-seq]
+                (if (>= offset n)
+                  (ByteBuffer/wrap ary)
+                  (let [buf ^ByteBuffer (first bytes)
+                        num-bytes (long (min (.remaining buf) (- n offset)))]
+                    (-> buf duplicate (.get ary offset num-bytes))
+                    (recur (+ offset num-bytes) (rest bytes)))))))))))
 
   (concat-bytes- [_ bufs]
     (create-buf-seq (concat buf-seq bufs))))
@@ -229,10 +233,13 @@
   (take-contiguous-bytes- [this n]
     (cond
       (not (pos? n))
-      nil
+      empty-buffer
 
-      (<= n byte-count)
-      (-> buffer duplicate (limit (+ (position buffer) (min byte-count n))) slice)))
+      (< n byte-count)
+      (-> buffer duplicate (limit (+ (position buffer) (min byte-count n))) slice)
+
+      :else
+      buffer))
   (concat-bytes- [_ bufs]
     (create-buf-seq (cons buffer bufs))))
 
