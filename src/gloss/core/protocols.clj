@@ -9,6 +9,7 @@
 (ns ^{:skip-wiki true}
   gloss.core.protocols
   (:use
+	[potemkin]
     [gloss.core formats])
   (:import
     [java.nio Buffer ByteBuffer]
@@ -16,10 +17,10 @@
 
 ;;;
 
-(defprotocol Reader
+(defprotocol+ Reader
   (read-bytes [this buf-seq]))
 
-(defprotocol Writer
+(defprotocol+ Writer
   (sizeof [this])
   (write-bytes [this buf val]))
 

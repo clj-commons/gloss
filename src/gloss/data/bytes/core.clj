@@ -8,6 +8,8 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.bytes.core
+  (:use
+	potemkin)
   (:import
     [java.nio
      Buffer
@@ -35,7 +37,7 @@
 
 (declare create-buf-seq)
 
-(defprotocol BufferSequence
+(defprotocol+ BufferSequence
   (byte-count- [this])
   (write-to-buf [this ^ByteBuffer buf])
   (rewind-bytes [this])
@@ -73,7 +75,7 @@
 
 ;;;
 
-(deftype MultiBufferSequence [buf-seq byte-count]
+(deftype+ MultiBufferSequence [buf-seq byte-count]
   clojure.lang.Sequential
   clojure.lang.Seqable
   (seq [_]
@@ -94,7 +96,7 @@
 
   (equiv [this other]
     (= (seq this) other))
-  
+
   BufferSequence
   (byte-count- [_]
     byte-count)
@@ -115,10 +117,10 @@
     (cond
       (not (pos? n))
       this
-      
+
       (>= n byte-count)
       nil
-      
+
       :else
       (create-buf-seq
 	(loop [remaining n, s buf-seq]
@@ -127,12 +129,12 @@
 	      (cond
 		(= remaining (.remaining buf))
 		(rest s)
-		
+
 		(< remaining (.remaining buf))
 		(cons
 		  (-> buf duplicate (position (+ remaining (position buf))) slice)
 		  (rest s))
-		
+
 		:else
 		(recur (- remaining (.remaining buf)) (rest s)))))))))
 
@@ -140,10 +142,10 @@
     (cond
       (not (pos? n))
       nil
-      
+
       (>= n byte-count)
       this
-      
+
       :else
       (when-let [first-buf ^ByteBuffer (first buf-seq)]
 	(create-buf-seq
@@ -177,7 +179,7 @@
   (concat-bytes- [_ bufs]
     (create-buf-seq (concat buf-seq bufs))))
 
-(deftype SingleBufferSequence [^ByteBuffer buffer byte-count]
+(deftype+ SingleBufferSequence [^ByteBuffer buffer byte-count]
   clojure.lang.Sequential
   clojure.lang.Seqable
   (seq [_]
@@ -210,7 +212,7 @@
     (cond
       (not (pos? n))
       this
-      
+
       (< n byte-count)
       (SingleBufferSequence. (-> buffer duplicate (position n) slice) (- byte-count n))
 
@@ -220,7 +222,7 @@
     (cond
       (not (pos? n))
       nil
-      
+
       (< n byte-count)
       (SingleBufferSequence. (take-contiguous-bytes this n) n)
 
@@ -242,13 +244,13 @@
       (instance? SingleBufferSequence bytes)
       (instance? MultiBufferSequence bytes))
     bytes
-    
+
     (instance? ByteBuffer bytes)
     (create-buf-seq [bytes])
 
     (empty? bytes)
     nil
-    
+
     (= 1 (count bytes))
     (SingleBufferSequence. (first bytes) (.remaining ^Buffer (first bytes)))
 
