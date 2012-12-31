@@ -7,9 +7,9 @@
                  [lamina "0.5.0-SNAPSHOT"]
                  [potemkin "0.2.0-SNAPSHOT"]]
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
-  :multi-deps {:all [[lamina "0.5.0-beta3"]
-                     [potemkin "0.1.5"]]
-			   "master" [[org.clojure/clojure "1.5.0-master-SNAPSHOT"]]
+  :multi-deps {:all [[lamina "0.5.0-SNAPSHOT"]
+                     [potemkin "0.2.0-SNAPSHOT"]]
+               "master" [[org.clojure/clojure "1.5.0-master-SNAPSHOT"]]
                "1.2" [[org.clojure/clojure "1.2.1"]]
                "1.3" [[org.clojure/clojure "1.3.0"]]}
   :jvm-opts ["-server"])
