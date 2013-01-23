@@ -1,11 +1,11 @@
-(defproject gloss "0.2.2-SNAPSHOT"
+(defproject gloss "0.2.2-beta4"
   :description "speaks in bytes, so that you don't have to"
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo}
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [lamina "0.5.0-SNAPSHOT"]
-                 [potemkin "0.2.0-SNAPSHOT"]]
+                 [lamina "0.5.0-beta9"]
+                 [potemkin "0.2.0"]]
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :multi-deps {:all [[lamina "0.5.0-SNAPSHOT"]
                      [potemkin "0.2.0-SNAPSHOT"]]
