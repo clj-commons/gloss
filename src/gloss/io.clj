@@ -74,16 +74,18 @@
 (defn decode
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
-  [frame bytes]
-  (let [codec (compile-frame frame)]
-    (binding [complete? true]
-      (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
-	    [success val remainder] (read-bytes codec buf-seq)]
-	(when-not success
-	  (throw (Exception. "Insufficient bytes to decode frame.")))
-	(when-not (zero? (bytes/byte-count remainder))
-	  (throw (Exception. "Bytes left over after decoding frame.")))
-	val))))
+  ([frame bytes]
+     (decode frame bytes true))
+  ([frame bytes no-remainder?]
+     (let [codec (compile-frame frame)]
+       (binding [complete? true]
+         (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
+               [success val remainder] (read-bytes codec buf-seq)]
+           (when-not success
+             (throw (Exception. "Insufficient bytes to decode frame.")))
+           (when-not (and no-remainder? (zero? (bytes/byte-count remainder)))
+             (throw (Exception. "Bytes left over after decoding frame.")))
+           val)))))
 
 (defn- decoder [frame]
   (let [codec (compile-frame frame)]
