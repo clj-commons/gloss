@@ -206,7 +206,7 @@
     (.rewind buffer)
     this)
   (dup-bytes- [_]
-    (SingleBufferSequence. (.duplicate buffer) byte-count))
+    (SingleBufferSequence. (duplicate buffer) byte-count))
   (drop-bytes- [this n]
     (cond
       (not (pos? n))
