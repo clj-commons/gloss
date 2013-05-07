@@ -46,7 +46,7 @@
   "Encodes a sequence of values, and writes them to a ByteBuffer."
   [frame buf vals]
   (let [codec (compile-frame frame)]
-    (assert (sizeof codec))
+    ;(assert (sizeof codec))
     (doseq [v vals]
       (write-bytes codec buf v))))
 

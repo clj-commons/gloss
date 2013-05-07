@@ -280,8 +280,9 @@
 	      (with-buffer [buf (* (count vs) size)]
 		(doseq [v vs]
 		  (write-bytes codec buf v)))
-	      (apply concat
-		(map #(write-bytes codec nil %) vs))))))
+	      (doall
+                (apply concat
+                  (map #(write-bytes codec buf %) vs)))))))
       
       :else
       (codecs/wrap-prefixed-sequence
