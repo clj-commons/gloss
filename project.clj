@@ -1,15 +1,14 @@
-(defproject gloss "0.2.2-beta5"
+(defproject gloss "0.2.2-rc1"
   :description "speaks in bytes, so that you don't have to"
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo}
-  :dependencies [[org.clojure/clojure "1.4.0"]
-                 [lamina "0.5.0-beta9"]
-                 [potemkin "0.2.0"]]
+  :dependencies [[lamina "0.5.0-rc1"]
+                 [potemkin "0.2.2"]]
+  :aliases {"all" ["with-profile" "1.6,dev:1.3,dev:dev:1.4,dev"]}
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
-  :multi-deps {:all [[lamina "0.5.0-beta9"]
-                     [potemkin "0.2.0"]]
-               "master" [[org.clojure/clojure "1.5.0-master-SNAPSHOT"]]
-               "1.2" [[org.clojure/clojure "1.2.1"]]
-               "1.3" [[org.clojure/clojure "1.3.0"]]}
+  :profiles {:1.6 {:dependencies [[org.clojure/clojure "1.6.0-master-SNAPSHOT"]]}
+             :dev {:dependencies [[org.clojure/clojure "1.5.1"]]}
+             :1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}
+             :1.3 {:dependencies [[org.clojure/clojure "1.3.0"]]}}
   :jvm-opts ["-server"])
