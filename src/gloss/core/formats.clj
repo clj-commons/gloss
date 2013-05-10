@@ -51,7 +51,7 @@
       (CharBuffer/wrap ^CharSequence x))))
 
 (defn string-to-byte-buffer
-  ([s charset] 
+  ([s ^String charset]
    (->> s
      (map #(if (string? %) (.getBytes ^String % charset) %))
      (map to-byte-buffer)))
