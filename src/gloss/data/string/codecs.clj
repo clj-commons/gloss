@@ -44,6 +44,9 @@
                   (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
                   (drop-bytes (rest bytes) 1))))
 
+	    (.isError result)
+	    (.throwException result)
+
 	    :else
 	    (recur chars (rest bytes))))))))
 
