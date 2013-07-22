@@ -271,7 +271,9 @@
 	(reify
 	  Reader
 	  (read-bytes [_ b]
-	    (reader b nil))
+	    (if (zero? (bytes/byte-count b))
+              [true [] nil]
+              (reader b nil)))
 	  Writer
 	  (sizeof [_]
 	    nil)
