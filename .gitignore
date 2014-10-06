@@ -7,3 +7,4 @@ push
 autodoc
 .lein*
 target
+.nrepl*

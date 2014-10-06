@@ -9,9 +9,10 @@
 (ns gloss.io
   (:use
     [gloss.core codecs structure protocols]
-    [potemkin]
-    [lamina core api])
+    [potemkin])
   (:require
+    [manifold.deferred :as d]
+    [manifold.stream :as s]
     [gloss.core.formats :as formats]
     [gloss.data.bytes :as bytes])
   (:import
@@ -56,16 +57,16 @@
   (let [codec (compile-frame frame)]
     (if-let [size (sizeof codec)]
       (let [buf (ByteBuffer/allocate (* size (count vals)))]
-	(encode-to-buffer codec buf vals)
-	[(.rewind buf)])
+        (encode-to-buffer codec buf vals)
+        [(.rewind buf)])
       (apply concat
-	(map #(write-bytes codec nil %) vals)))))
+        (map #(write-bytes codec nil %) vals)))))
 
 (defn encode-to-stream
   "Encodes a sequence of values, and writes them to an OutputStream."
   [frame ^OutputStream output-stream vals]
   (let [codec (compile-frame frame)
-	channel (Channels/newChannel output-stream)]
+        channel (Channels/newChannel output-stream)]
     (doseq [buf (encode-all codec vals)]
       (.write channel ^ByteBuffer buf))))
 
@@ -124,73 +125,66 @@
   (if (empty? buf-seq)
     (let [[success x remainder] (read-bytes (first codecs) buf-seq)]
       (if success
-	[[x] (rest codecs) remainder]
-	[nil (cons x (rest codecs)) remainder]))
+        [[x] (rest codecs) remainder]
+        [nil (cons x (rest codecs)) remainder]))
     (loop [buf-seq buf-seq, vals [], codecs codecs]
       (if (or (empty? codecs) (zero? (bytes/byte-count buf-seq)))
-	[vals codecs buf-seq]
-	(let [[success x remainder] (read-bytes (first codecs) buf-seq)]
-	  (if success
-	    (recur remainder (conj vals x) (rest codecs))
-	    [vals (cons x (rest codecs)) remainder]))))))
+        [vals codecs buf-seq]
+        (let [[success x remainder] (read-bytes (first codecs) buf-seq)]
+          (if success
+            (recur remainder (conj vals x) (rest codecs))
+            [vals (cons x (rest codecs)) remainder]))))))
 
-(defn decode-channel
-  "Given a channel that emits bytes, returns a channel that emits decoded frames whenever
+(defn decode-stream
+  "Given a stream that emits bytes, returns a channel that emits decoded frames whenever
    there are sufficient bytes."
   [src frame]
-  (let [dst (channel)
-	codec (compile-frame frame)]
-    (on-closed dst #(close src))
-    (run-pipeline {:codecs (repeat codec) :bytes nil}
-      {:error-handler (fn [_] (close dst))}
-      (fn [state]
-	(run-pipeline (read-channel* src :on-drained [])
-	  (fn [bytes]
-	    (binding [complete? (drained? src)]
-	      (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		    [s codecs remainder] (when-not (zero? (bytes/byte-count bytes))
-					   (decode-byte-sequence
-					     (:codecs state)
-					     (bytes/concat-bytes (:bytes state) bytes)))]
-		(when-not (empty? s)
-		  (apply enqueue dst s))
-		(when (drained? src)
-		  (close dst))
-		{:codecs codecs :bytes (to-buf-seq remainder)})))))
-      (fn [x]
-	(when-not (drained? src)
-	  (restart x))))
-    (splice dst (grounded-channel))))
+  (let [src (s/->source src)
+        dst (s/stream)
+        state-ref (atom {:codecs (repeat frame) :bytes nil})
+        f (fn [bytes]
+            (let [state @state-ref]
+              (binding [complete? (s/drained? src)]
+                (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+                      [s codecs remainder] (decode-byte-sequence
+                                             (:codecs state)
+                                             (bytes/concat-bytes (:bytes state) bytes))]
+                  (reset! state-ref {:codecs codecs :bytes (to-buf-seq remainder)})
+                  (s/put-all! dst s)))))]
 
-(defn decode-channel-headers
+    (s/connect-via src f dst {:downstream? false})
+    (s/on-drained src #(do (f []) (s/close! dst)))
+
+    dst))
+
+(def decode-channel decode-stream)
+
+(defn decode-stream-headers
   "Given a channel that emits bytes, returns a channel that will emit one decoded frame for
    each frame passed into the function.  After those frames have been decoded, the channel will
    simply emit any bytes that are passed into the source channel."
   [src & frames]
-  (let [dst (channel)]
-    (run-pipeline {:codecs (map compile-frame frames) :bytes nil}
-      (fn [state]
-	(run-pipeline (read-channel* src :on-drained [])
-	  (fn [bytes]
-	    (if (empty? (:codecs state))
-	      state
-	      (binding [complete? (drained? src)]
-		(let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
-		      [vals codecs remainder] (decode-byte-sequence
-						(:codecs state)
-						(bytes/concat-bytes (:bytes state) bytes))]
-		  (when-not (empty? vals)
-		    (apply enqueue dst vals))
-		  {:codecs codecs, :bytes (to-buf-seq remainder)}))))))
-      (fn [state]
-	(cond
-	  (empty? (:codecs state))
-	  (do
-	    (when-let [remainder (:bytes state)]
-	      (enqueue dst remainder))
-	    (siphon src dst)
-	    (on-drained src #(close dst)))
+  (let [src (s/->source src)
+        dst (s/stream)
+        state-ref (atom {:codecs (map compile-frame frames) :bytes nil})
+        f (fn [bytes]
+            (let [{:keys [codecs] :as state} @state-ref]
+              (if (empty? codecs)
+                (s/put! dst bytes)
+                (binding [complete? (s/drained? src)]
+                  (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+                        [s codecs remainder] (decode-byte-sequence
+                                               codecs
+                                               (bytes/concat-bytes (:bytes state) bytes))]
+                    (reset! state-ref {:codecs codecs :bytes (to-buf-seq remainder)})
+                    (let [res (s/put-all! dst s)]
+                      (if (empty? codecs)
+                        (s/put-all! dst remainder)
+                        res)))))))]
 
-	  (not (drained? src))
-	  (restart state))))
-    (splice dst (closed-channel))))
+    (s/connect-via src dst {:downstream? false})
+    (s/on-drained src #(do (f []) (s/close! dst)))
+
+    dst))
+
+(def decode-channel-headers decode-stream-headers)

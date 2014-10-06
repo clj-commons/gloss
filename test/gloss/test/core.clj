@@ -12,8 +12,9 @@
     [gloss.core.formats :only (to-char-buffer)]
     [gloss.core.protocols :only (write-bytes read-bytes)]
     [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes take-contiguous-bytes buf->string)]
-    [lamina core]
-    [clojure test walk]))
+    [clojure test walk])
+  (:require
+    [manifold.stream :as s]))
 
 
 (defn convert-char-sequences [x]
@@ -57,41 +58,41 @@
   (let [buf-seq (to-buf-seq bytes)]
     (to-buf-seq
       (apply concat
-	(map
-	  #(take-bytes (drop-bytes buf-seq %) 1)
-	  (range (byte-count buf-seq)))))))
+        (map
+          #(take-bytes (drop-bytes buf-seq %) 1)
+          (range (byte-count buf-seq)))))))
 
 (defn split-bytes [index bytes]
   (let [bytes (-> bytes to-buf-seq dup-bytes)]
     [(take-bytes bytes index) (drop-bytes bytes index)]))
 
-(defn split-channel [split-fn frame val]
-  (apply closed-channel (split-fn (encode-all frame [val val]))))
+(defn split-stream [split-fn frame val]
+  (s/->source (split-fn (encode-all frame [val val]))))
 
 (defn test-stream-roundtrip [split-fn frame val]
-  (let [ch (decode-channel (split-channel split-fn frame val) frame)]
-    (let [s (convert-result (channel->seq ch))]
+  (let [ch (decode-stream (split-stream split-fn frame val) frame)]
+    (let [s (convert-result (s/stream->seq ch))]
       (is= [val val] s)))
-  (let [ch (decode-channel-headers (split-channel split-fn frame val) frame)
-	v1 (wait-for-message ch)
-	v2 (->> (decode-channel ch frame) channel->seq)]
+  #_(let [s (decode-stream-headers (split-stream split-fn frame val) frame)
+        v1 @(s/take! s)
+        v2 (s/stream->seq (decode-stream s frame))]
     (let [s (convert-result (cons v1 v2))]
       (is= [val val] s))))
 
 (defn test-simple-roundtrip [f val]
   (let [bytes (encode f val)
-	val* (convert-char-sequences (decode f bytes))]
+        val* (convert-char-sequences (decode f bytes))]
     (is (= val val*))))
 
 (defn test-roundtrip [f val]
   (let [f (compile-frame f)
-	bytes (encode f val)
-	val* (convert-char-sequences (decode f bytes))
-	bytes (encode-all f [val val])
-	result (decode-all f bytes)
-	contiguous-result (decode-all f (contiguous bytes))
-	split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all f))
-	lazy-result (lazy-decode-all f bytes)
+        bytes (encode f val)
+        val* (convert-char-sequences (decode f bytes))
+        bytes (encode-all f [val val])
+        result (decode-all f bytes)
+        contiguous-result (decode-all f (contiguous bytes))
+        split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all f))
+        lazy-result (lazy-decode-all f bytes)
         lazy-contiguous-result (lazy-decode-all f bytes)
         lazy-split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (lazy-decode-all f))]
     (is= val val*)
@@ -176,8 +177,8 @@
     [:byte :int16
      (finite-block
        (prefix :int64
-	 #(- % 4)
-	 #(+ % 4)))
+         #(- % 4)
+         #(+ % 4)))
      (finite-block 3)
      {:abc (finite-block 3)}]
     [1
@@ -188,35 +189,35 @@
 
 (deftest test-complex-prefix
   (let [p (prefix [:byte :byte]
-	    second
-	    (fn [x] [\$ x]))
-	codec (repeated :byte :prefix p)
-	buf (to-byte-buffer [\$ 3 1 2 3])]
+            second
+            (fn [x] [\$ x]))
+        codec (repeated :byte :prefix p)
+        buf (to-byte-buffer [\$ 3 1 2 3])]
     (test-full-roundtrip codec [buf] [1 2 3])))
 
 (deftest test-simple-header
   (let [b->h (fn [body]
-	       (get
-		 {:a 1 :b 2 :c 3}
-		 (first body)))
-	h->b (fn [hd]
-	       (condp = hd
-		 1 (compile-frame [:a :int16])
-		 2 (compile-frame [:b :float32])
-		 3 (compile-frame [:c (string :utf-8 :delimiters [\0])])))
-	codec (header :byte h->b b->h)]
+               (get
+                 {:a 1 :b 2 :c 3}
+                 (first body)))
+        h->b (fn [hd]
+               (condp = hd
+                 1 (compile-frame [:a :int16])
+                 2 (compile-frame [:b :float32])
+                 3 (compile-frame [:c (string :utf-8 :delimiters [\0])])))
+        codec (header :byte h->b b->h)]
     (test-roundtrip codec [:a 1])
     (test-roundtrip codec [:b 2.5])
     (test-roundtrip codec [:c "abc"])))
 
 (deftest test-multi-delimited-header
-  (let [h->b (fn [head] 
+  (let [h->b (fn [head]
                (case head
                  "CMD" (compile-frame ["CMD" (string :utf-8 :delimiters ["\r\n"])])
                  "TERM" (compile-frame ["TERM"])))
         b->h (fn [body] (first body))
         cmd->delim (fn [cmd] (if (= cmd "TERM") ["\r\n"] [" "]))
-        codec (compile-frame (header (string :utf-8 :delimiters [" " "\r\n"] :value->delimiter cmd->delim) 
+        codec (compile-frame (header (string :utf-8 :delimiters [" " "\r\n"] :value->delimiter cmd->delim)
                                      h->b b->h))
         cmd (encode codec ["CMD" "TOKEN"])
         term (encode codec ["TERM"])]
@@ -309,7 +310,7 @@
   (test-roundtrip
     (finite-frame
       (prefix (string-integer :ascii :delimiters [":"])
-	inc
-	dec)
+        inc
+        dec)
       (string :utf-8 :suffix ","))
     "abc"))
