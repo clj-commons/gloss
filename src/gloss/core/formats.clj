@@ -8,6 +8,8 @@
 
 (ns ^{:skip-wiki true}
   gloss.core.formats
+  (:require
+    [byte-streams :as bs])
   (:use
     [gloss.data.bytes.core])
   (:import
@@ -21,26 +23,19 @@
 (defn to-buf-seq
   "Converts the value to a sequence of ByteBuffers."
   [x]
-  (when x
-    (cond
-      (= (class x) byte-array-class)
-      (create-buf-seq (ByteBuffer/wrap x))
-
-      :else
-      (create-buf-seq x))))
+  (if (nil? x)
+    (create-buf-seq x)
+    (create-buf-seq (bs/convert x (bs/seq-of ByteBuffer)))))
 
 (defn to-byte-buffer
   "Converts the value to a Bytebuffer."
   [x]
   (when x
     (cond
+      (sequential? x) (bs/to-byte-buffer (map to-byte-buffer x))
       (instance? Character x) (to-byte-buffer (str x))
-      (string? x) (to-byte-buffer (.getBytes ^String x "utf-8"))
-      (= (class x) byte-array-class) (ByteBuffer/wrap x)
-      (instance? ByteBuffer x) x
-      (sequential? x) (to-byte-buffer (byte-array (map #(byte (int %)) x)))
       (number? x) (to-byte-buffer (byte-array [(byte x)]))
-      :else (throw (Exception. (str "Cannot convert to ByteBuffer: " x))))))
+      :else (bs/to-byte-buffer x))))
 
 (defn to-char-buffer
   "Converts the value to a CharBuffer."
@@ -48,11 +43,12 @@
   (when x
     (if (instance? CharBuffer x)
       x
-      (CharBuffer/wrap ^CharSequence x))))
+      (CharBuffer/wrap ^CharSequence (bs/convert x CharSequence)))))
 
 (defn string-to-byte-buffer
   ([s ^String charset]
    (->> s
      (map #(if (string? %) (.getBytes ^String % charset) %))
      (map to-byte-buffer)))
-  ([s] (string-to-byte-buffer s "utf-8")))
+  ([s]
+     (string-to-byte-buffer s "utf-8")))
