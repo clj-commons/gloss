@@ -23,7 +23,7 @@
 (defn to-buf-seq
   "Converts the value to a sequence of ByteBuffers."
   [x]
-  (if (nil? x)
+  (if (or (nil? x) (and (sequential? x) (empty? x)))
     (create-buf-seq x)
     (create-buf-seq (bs/convert x (bs/seq-of ByteBuffer)))))
 
