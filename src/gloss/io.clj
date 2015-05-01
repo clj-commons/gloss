@@ -182,7 +182,7 @@
                         (s/put-all! dst remainder)
                         res)))))))]
 
-    (s/connect-via src dst {:downstream? false})
+    (s/connect-via src f dst {:downstream? false})
     (s/on-drained src #(do (f []) (s/close! dst)))
 
     dst))
