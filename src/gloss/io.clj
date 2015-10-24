@@ -16,6 +16,8 @@
     [gloss.core.formats :as formats]
     [gloss.data.bytes :as bytes])
   (:import
+    [gloss.data.bytes.core
+     SingleBufferSequence]
     [java.nio.channels
      Channels]
     [java.nio
@@ -37,12 +39,6 @@
 
 ;;;
 
-(defn encode
-  "Turns a frame value into a sequence of ByteBuffers."
-  [frame val]
-  (let [codec (compile-frame frame)]
-    (write-bytes codec nil val)))
-
 (defn encode-to-buffer
   "Encodes a sequence of values, and writes them to a ByteBuffer."
   [frame buf vals]
@@ -51,16 +47,33 @@
     (doseq [v vals]
       (write-bytes codec buf v))))
 
+(defn encode
+  "Turns a frame value into a sequence of ByteBuffers."
+  ([frame val]
+   (encode frame val false))
+  ([frame val direct?]
+   (let [codec (compile-frame frame)]
+     (if direct?
+       (let [size (sizeof codec)
+             buf (ByteBuffer/allocateDirect size)]
+         (write-bytes codec buf val)
+         (SingleBufferSequence. (.rewind ^ByteBuffer buf) size))
+       (write-bytes codec nil val)))))
+
 (defn encode-all
   "Turns a sequence of frame values into a sequence of ByteBuffers."
-  [frame vals]
-  (let [codec (compile-frame frame)]
-    (if-let [size (sizeof codec)]
-      (let [buf (ByteBuffer/allocate (* size (count vals)))]
-        (encode-to-buffer codec buf vals)
-        [(.rewind buf)])
-      (apply concat
-        (map #(write-bytes codec nil %) vals)))))
+  ([frame vals]
+   (encode-all frame vals false))
+  ([frame vals direct?]
+   (let [codec (compile-frame frame)]
+     (if-let [size (sizeof codec)]
+       (let [buf (if direct?
+                   (ByteBuffer/allocateDirect (* size (count vals)))
+                   (ByteBuffer/allocate (* size (count vals))))]
+         (encode-to-buffer codec buf vals)
+         [(.rewind buf)])
+       (apply concat
+         (map #(write-bytes codec nil %) vals))))))
 
 (defn encode-to-stream
   "Encodes a sequence of values, and writes them to an OutputStream."
