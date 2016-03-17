@@ -26,13 +26,13 @@
 
 (defmacro defcodec
   "Defines a compiled frame."
-  [name frame]
-  `(def ~name (compile-frame ~frame)))
+  [name frame & coders]
+  `(def ~name (compile-frame ~frame ~@coders)))
 
 (defmacro defcodec-
   "Defines a private compiled frame."
-  [name frame]
-  `(defcodec ^{:private true} ~name ~frame))
+  [name frame & coders]
+  `(defcodec ^:private ~name ~frame ~@coders))
 
 (import-fn protocols/sizeof)
 
