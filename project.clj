@@ -7,13 +7,12 @@
                  [byte-streams "0.2.1"]
                  [potemkin "0.4.3"]]
   :aliases {"all" ["with-profile" "dev:1.9:1.7:1.6:1.5"]}
-  :plugins [[codox "0.8.10"]
+  :plugins [[lein-codox "0.9.4"]
             [ztellman/lein-cljfmt "0.1.10"]]
   :cljfmt {:indents {#".*" [[:inner 0]]}}
-  :codox {:src-dir-uri "https://github.com/ztellman/gloss/blob/master/"
-          :src-linenum-anchor-prefix "L"
-          :defaults {:doc/format :markdown}
-          :include [gloss.core gloss.io]}
+  :codox {:source-uri "https://github.com/ztellman/gloss/blob/master/{filepath}#L{line}"
+          :metadata {:doc/format :markdown}
+          :namespaces [gloss.core gloss.io]}
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :profiles {:1.9 {:dependencies [[org.clojure/clojure "1.9.0-master-SNAPSHOT"]]}
              :dev {:dependencies [[org.clojure/clojure "1.8.0"]]}
