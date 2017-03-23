@@ -9,7 +9,7 @@ Read more about it in [the wiki](https://github.com/ztellman/gloss/wiki).
 To add Gloss as a dependency to your `project.clj`:
 
 ```clj
-[gloss "0.2.5"]
+[gloss "0.2.6"]
 ```
 
 ## documentation
