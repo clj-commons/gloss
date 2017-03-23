@@ -32,7 +32,7 @@
 (defmacro defcodec-
   "Defines a private compiled frame."
   [name frame & coders]
-  `(defcodec ^:private ~name ~frame ~@coders))
+  `(defcodec ~(with-meta name (assoc (meta name) :private true)) ~frame ~@coders))
 
 (import-fn protocols/sizeof)
 
