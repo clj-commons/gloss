@@ -1,3 +1,7 @@
+[![Clojars Project](https://img.shields.io/clojars/v/manifold.svg)](https://clojars.org/gloss)
+[![cljdoc badge](https://cljdoc.org/badge/manifold/manifold)](https://cljdoc.org/d/gloss/gloss)
+[![CircleCI](https://circleci.com/gh/clj-commons/manifold.svg?style=svg)](https://circleci.com/gh/clj-commons/gloss)
+
 Gloss is a byte-format DSL.It can turn complicated byte formats into Clojure data structures, allowing
 for easy use of custom network protocols and C libraries.  It can also turn Clojure data structures into
 compact byte representations, allowing for efficient use of bandwidth and disk.
