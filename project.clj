@@ -20,4 +20,5 @@
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}}
   :global-vars {*warn-on-reflection* true}
-  :jvm-opts ["-server"])
+  :jvm-opts ["-server"]
+  :javac-options ["-target" "1.8" "-source" "1.8"])

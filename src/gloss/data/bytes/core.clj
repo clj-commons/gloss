@@ -30,10 +30,10 @@
   ([^ByteBuffer buf]
      (.position buf))
   ([^ByteBuffer buf n]
-     (.position buf n)))
+     (.position buf ^int n)))
 
 (defn ^ByteBuffer limit [^ByteBuffer buf n]
-  (.limit buf n))
+  (.limit buf ^int n))
 
 (declare create-buf-seq)
 
