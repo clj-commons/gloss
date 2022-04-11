@@ -66,34 +66,30 @@
 	    [[(or (last dimensions) 0)
 	      (last buf-seq)]]))))))
 
-(defn delimiter-matcher [delimiter max-delimiter-length]
-  (let [delimiter (byte-buffer->byte-seq delimiter)]
-    `(do
-       (.position ~'buf ~'pos)
-       (and
-	~@(when (< 1 max-delimiter-length)
-	    [`(<= ~'pos (or ~'final-position
-			  (unchecked-subtract ~'buf-length ~(count delimiter))))])
-	~@(map
-	    (fn [val] `(== ~(int val) (int (.get ~'buf))))
-	    delimiter)))))
-
 (defn match-loop [delimiters strip-delimiters?]
   (let [delimiters (sort-delimiters delimiters)
-	max-delimiter-length (.remaining ^ByteBuffer (first delimiters))]
-    (eval
-      (postwalk-replace
-	{'buf (with-meta 'buf {:tag "java.nio.ByteBuffer"})}
-	`(fn [~'buf last-and-complete?#]
-	   (let [~'buf-length (.remaining ~'buf)
-		 ~'final-position (when-not last-and-complete?#
-				    (unchecked-subtract ~'buf-length ~max-delimiter-length))]
-	     (loop [~'pos 0]
-	       (if (== ~'pos ~'buf-length)
-		 [false 0 0]
-		 (if (or ~@(map #(delimiter-matcher % max-delimiter-length) delimiters))
-		   [true ~(if strip-delimiters? 'pos `(.position ~'buf)) (.position ~'buf)]
-		   (recur (unchecked-inc ~'pos)))))))))))
+        max-delimiter-length (.remaining ^ByteBuffer (first delimiters))]
+    (fn [^java.nio.ByteBuffer buf last-and-complete?]
+      (let [buf-length (.remaining buf)
+            final-position (when-not last-and-complete?
+                             (unchecked-subtract buf-length max-delimiter-length))]
+        (loop [pos 0]
+          (if (== pos buf-length)
+            [false 0 0]
+            (if (some
+                  (fn [delimiter]
+                    (let [delimiter (byte-buffer->byte-seq delimiter)]
+                      (.position buf pos)
+                      (and
+                        (or (not (< 1 max-delimiter-length))
+                            (<= pos (or final-position
+                                        (unchecked-subtract buf-length (count delimiter)))))
+                        (every?
+                          (fn [val] (== (int val) (int (.get buf))))
+                          delimiter))))
+                  delimiters)
+              [true (if strip-delimiters? pos (.position buf)) (.position buf)]
+              (recur (unchecked-inc pos)))))))))
 
 (def delimited-bytes-splitter
   (memoize
