@@ -3,9 +3,10 @@ pom.xml*
 lib
 classes
 .DS_Store
-push
-autodoc
 .lein*
 target
 .nrepl*
-doc
+/checkouts/
+.cpcache/
+**/.clj-kondo/.cache
+
