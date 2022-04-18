@@ -71,7 +71,7 @@
    :be `ByteOrder/BIG_ENDIAN
    :ne `(ByteOrder/nativeOrder)})
 
-(defn bytes-umedium
+(defn bytes->umedium
   [x]
   (let [[b0 b1 b2] x]
     (bit-or
@@ -80,14 +80,14 @@
       (bit-shift-left (bit-and b1 0xFF) 8))
      (bit-shift-left (bit-and b2 0xFF) 0))))
 
-(defn umedium-medium
+(defn umedium->medium
   [x]
   (let [uval2 (bit-and x 0x800000)]
     (if (not= uval2 0)
       (bit-or x 0xff000000)
       x)))
 
-(defn medium-bytes
+(defn medium->bytes
   [x]
   (into-array Byte/TYPE
    (map byte
@@ -95,14 +95,14 @@
          (bit-shift-right x 8)
          (bit-shift-right x 0)])))
 
-(defn getUnsignedMedium [buffer]
+(defn get-unsigned-medium [buffer]
   (let [bytes (byte-array 3)]
-    (.get buffer bytes)
-    (bytes-umedium bytes)))
+    (.get ^ByteBuffer buffer bytes)
+    (bytes->umedium bytes)))
 
-(defn putMedium [buffer value]
-  (let [bytes (medium-bytes value)]
-    (.put buffer bytes)))
+(defn put-medium [buffer value]
+  (let [bytes (medium->bytes value)]
+    (.put ^ByteBuffer buffer ^bytes bytes)))
 
 (defmacro with-byte-order [[buf bo] & body]
   (if (nil? bo)
@@ -161,7 +161,9 @@
    :int16-le (primitive-codec .getShort .putShort 2 identity short identity :le)
    :int16-be (primitive-codec .getShort .putShort 2 identity short identity :be)
 
-   :int24 (primitive-codec getUnsignedMedium putMedium 3 umedium-medium int identity)
+   :int24 (primitive-codec get-unsigned-medium put-medium 3 umedium->medium int identity)
+   :int24-le (primitive-codec get-unsigned-medium put-medium 3 umedium->medium int identity :le)
+   :int24-be (primitive-codec get-unsigned-medium put-medium 3 umedium->medium int identity :be)
 
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
    :int32-le (primitive-codec .getInt .putInt 4 identity int identity :le)
@@ -174,7 +176,7 @@
    :float32 (primitive-codec .getFloat .putFloat 4 identity float identity)
    :float32-le (primitive-codec .getFloat .putFloat 4 identity float identity :le)
    :float32-be (primitive-codec .getFloat .putFloat 4 identity float identity :be)
-   
+
    :float64 (primitive-codec .getDouble .putDouble 8 identity double identity)
    :float64-le (primitive-codec .getDouble .putDouble 8 identity double identity :le)
    :float64-be (primitive-codec .getDouble .putDouble 8 identity double identity :be)
@@ -185,7 +187,9 @@
    :uint16-le (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :le)
    :uint16-be (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
 
-   :uint24 (primitive-codec getUnsignedMedium putMedium 3 identity int identity)
+   :uint24 (primitive-codec get-unsigned-medium put-medium 3 identity int identity)
+   :uint24-le (primitive-codec get-unsigned-medium put-medium 3 identity int identity :le)
+   :uint24-be (primitive-codec get-unsigned-medium put-medium 3 identity int identity :be)
 
    :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
    :uint32-le (primitive-codec .getInt .putInt 4 int->uint int uint->int :le)
