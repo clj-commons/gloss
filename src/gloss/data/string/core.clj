@@ -8,8 +8,8 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.string.core
-  (:use
-    [gloss.data bytes])
+  (:require
+    [gloss.data.bytes :refer :all])
   (:import
     [java.nio
      Buffer

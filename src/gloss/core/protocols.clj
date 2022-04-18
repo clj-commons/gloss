@@ -46,7 +46,11 @@
 
 ;;;
 
-(defmacro with-buffer [[buf size] & body]
+(defmacro with-buffer
+  "If the buffer exists, execute the body as is.
+
+   Otherwise, allocate a ByteBuffer of the given size, assign it to the var, execute the body, and return a SingleBufferSequence."
+  [[buf size] & body]
   `(if ~buf
      (do ~@body)
      (let [~buf (ByteBuffer/allocate ~size)]

@@ -8,9 +8,9 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.bytes.bits
-  (:use
-    [gloss.core protocols]
-    [gloss.data.bytes core])
+	(:require
+		[gloss.core.protocols :refer [Reader Writer with-buffer]]
+		[gloss.data.bytes.core :refer :all])
   (:import
     [java.math BigInteger]
     [java.nio ByteBuffer]))
