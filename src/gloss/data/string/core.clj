@@ -36,20 +36,20 @@
     nil
 
     :else
-    (loop [remaining n, s buf-seq]
+    (loop [remaining (int n), s buf-seq]
       (when-not (empty? s)
-	(let [buf ^CharBuffer (first s)]
-	  (cond
-	    (= remaining (.remaining buf))
-	    (rest s)
+        (let [buf ^CharBuffer (first s)]
+          (cond
+            (= remaining (.remaining buf))
+            (rest s)
 
-	    (< remaining (.remaining buf))
-	    (cons
-	      (-> buf .duplicate ^CharBuffer (.position (+ remaining (.position buf))) .slice)
-	      (rest s))
+            (< remaining (.remaining buf))
+            (cons
+              (-> buf .duplicate ^CharBuffer (.position (+ remaining (.position buf))) .slice)
+              (rest s))
 
-	    :else
-	    (recur (- remaining (.remaining buf)) (rest s))))))))
+            :else
+            (recur (- remaining (.remaining buf)) (rest s))))))))
 
 (defn take-chars
   [n buf-seq]
@@ -62,16 +62,17 @@
 
     :else
     (when-let [first-buf ^CharBuffer (first buf-seq)]
-      (if (> (.remaining first-buf) n)
-	[(-> first-buf .duplicate ^CharBuffer (.limit (+ (.position first-buf) n)) .slice)]
-	(when (<= n (byte-count buf-seq))
-	  (loop [remaining n, s buf-seq, accumulator []]
-	    (if (pos? remaining)
-	      (let [buf ^CharBuffer (first s)]
-		(if (>= remaining (.remaining buf))
-		  (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
-		  (conj accumulator (-> buf .duplicate ^CharBuffer (.limit (+ (.position buf) remaining)) .slice))))
-	      accumulator)))))))
+      (let [n (int n)]
+        (if (> (.remaining first-buf) n)
+          [(-> first-buf .duplicate ^CharBuffer (.limit (+ (.position first-buf) n)) .slice)]
+          (when (<= n (byte-count buf-seq))
+            (loop [remaining n, s buf-seq, accumulator []]
+              (if (pos? remaining)
+                (let [buf ^CharBuffer (first s)]
+                  (if (>= remaining (.remaining buf))
+                    (recur (- remaining (.remaining buf)) (rest s) (conj accumulator buf))
+                    (conj accumulator (-> buf .duplicate ^CharBuffer (.limit (+ (.position buf) remaining)) .slice))))
+                accumulator))))))))
 
 
 (defn ^CharBuffer create-char-buf

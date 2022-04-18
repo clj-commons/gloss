@@ -123,20 +123,20 @@
 
       :else
       (create-buf-seq
-	(loop [remaining n, s buf-seq]
-	  (when-not (empty? s)
-	    (let [buf ^ByteBuffer (first s)]
-	      (cond
-		(= remaining (.remaining buf))
-		(rest s)
+        (loop [remaining n, s buf-seq]
+          (when-not (empty? s)
+            (let [buf ^ByteBuffer (first s)]
+              (cond
+                (= remaining (.remaining buf))
+                (rest s)
 
-		(< remaining (.remaining buf))
-		(cons
-		  (-> buf duplicate (position (+ remaining (position buf))) slice)
-		  (rest s))
+                (< remaining (.remaining buf))
+                (cons
+                  (-> buf duplicate (position (+ remaining (position buf))) slice)
+                  (rest s))
 
-		:else
-		(recur (- remaining (.remaining buf)) (rest s)))))))))
+                :else
+                (recur (- remaining (.remaining buf)) (rest s)))))))))
 
   (take-bytes- [this n]
     (cond
@@ -147,33 +147,34 @@
       this
 
       :else
-      (when-let [first-buf ^ByteBuffer (first buf-seq)]
-	(create-buf-seq
-	  (if (> (.remaining first-buf) n)
-	    [(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)]
-	    (when (<= n byte-count)
-	      (loop [remaining n, bytes buf-seq, accumulator []]
-		(if (pos? remaining)
-		  (let [buf ^ByteBuffer (first bytes)]
-		    (if (>= remaining (.remaining buf))
-		      (recur (- remaining (.remaining buf)) (rest bytes) (conj accumulator buf))
-		      (conj accumulator (-> buf duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) slice))))
-		  accumulator))))))))
+      (let [n (int n)]
+        (when-let [first-buf ^ByteBuffer (first buf-seq)]
+          (create-buf-seq
+            (if (> (.remaining first-buf) n)
+              [(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)]
+              (when (<= n byte-count)
+                (loop [remaining n, bytes buf-seq, accumulator []]
+                  (if (pos? remaining)
+                    (let [buf ^ByteBuffer (first bytes)]
+                      (if (>= remaining (.remaining buf))
+                        (recur (- remaining (.remaining buf)) (rest bytes) (conj accumulator buf))
+                        (conj accumulator (-> buf duplicate ^ByteBuffer (.limit (+ (.position buf) remaining)) slice))))
+                    accumulator)))))))))
 
   (take-contiguous-bytes- [this n]
-    (let [n (min byte-count n)
-	  first-buf ^ByteBuffer (first buf-seq)]
+    (let [n (int (min byte-count n))
+          first-buf ^ByteBuffer (first buf-seq)]
       (if (> (.remaining first-buf) n)
-	(-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
-	(when (and (pos? n) (<= n byte-count))
-	  (let [ary (byte-array n)]
-	    (loop [offset 0, bytes buf-seq]
-	      (if (>= offset n)
-		(ByteBuffer/wrap ary)
-		(let [buf ^ByteBuffer (first bytes)
-		      num-bytes (long (min (.remaining buf) (- n offset)))]
-		  (-> buf duplicate (.get ary offset num-bytes))
-		  (recur (+ offset num-bytes) (rest bytes))))))))))
+        (-> first-buf duplicate ^ByteBuffer (.limit (+ (.position first-buf) n)) slice)
+        (when (and (pos? n) (<= n byte-count))
+          (let [ary (byte-array n)]
+            (loop [offset 0, bytes buf-seq]
+              (if (>= offset n)
+                (ByteBuffer/wrap ary)
+                (let [buf ^ByteBuffer (first bytes)
+                      num-bytes (long (min (.remaining buf) (- n offset)))]
+                  (-> buf duplicate (.get ary offset num-bytes))
+                  (recur (+ offset num-bytes) (rest bytes))))))))))
 
   (concat-bytes- [_ bufs]
     (create-buf-seq (concat buf-seq bufs))))

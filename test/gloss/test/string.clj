@@ -20,7 +20,7 @@
 	  #(take-bytes (drop-bytes buf-seq %) 1)
 	  (range (byte-count buf-seq)))))))
 
-(def pilcrow-string (apply str (repeat 30 "¶")))
+(def ^String pilcrow-string (apply str (repeat 30 "¶")))
 (def pilcrows (.getBytes pilcrow-string "utf-8"))
 
 (defn segments [interval]
