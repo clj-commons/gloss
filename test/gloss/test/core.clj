@@ -318,4 +318,4 @@
 (deftest test-int24s
   (test-roundtrip
    [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
-   [100 100 100 100 100 100]))
+   [32779 32779 32779 32779 32779 32779]))
