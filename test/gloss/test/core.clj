@@ -316,6 +316,24 @@
     "abc"))
 
 (deftest test-int24s
-  (test-roundtrip
-   [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
-   [32779 32779 32779 32779 32779 32779]))
+  (testing "numbers"
+    (test-roundtrip
+     [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
+     (repeat 6 100)))
+  (testing "numbers greater than int16 range"
+    (test-roundtrip
+     [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
+     (repeat 6 32779)))
+  (testing "negative numbers"
+    (test-roundtrip
+     [:int24 :int24-le :int24-be]
+     (repeat 3 -1924)))
+  (testing "checking results against netty codec output"
+    (= [-20 -5 -1] (.array (first (encode [:int24-le] [-1044]))))
+    (= [-1 -5 -20] (.array (first (encode [:int24-be] [-1044]))))
+    (= [11 -128 0] (.array (first (encode [:int24-le] [32779]))))
+    (= [0 -128 11] (.array (first (encode [:int24-be] [32779]))))
+    (= [11 -128 0] (.array (first (encode [:uint24-le] [32779]))))
+    (= [0 -128 11] (.array (first (encode [:uint24-be] [32779]))))
+    (= [-1 -1 63] (.array (first (encode [:uint24-le] [4194303]))))
+    (= [63 -1 -1] (.array (first (encode [:uint24-be] [4194303]))))))
