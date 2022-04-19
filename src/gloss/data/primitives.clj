@@ -72,8 +72,9 @@
    :ne `(ByteOrder/nativeOrder)})
 
 (defn bytes->umedium
-  [x]
-  (let [[b0 b1 b2] x]
+  [x bo]
+  (let [bo-trans (if (= :le bo) reverse identity)
+        [b0 b1 b2] (bo-trans x)]
     (bit-or
      (bit-or
       (bit-shift-left (bit-and b0 0xFF) 16)
@@ -88,20 +89,31 @@
       x)))
 
 (defn medium->bytes
-  [x]
-  (into-array Byte/TYPE
-   (map byte
-        [(bit-shift-right x 16)
-         (bit-shift-right x 8)
-         (bit-shift-right x 0)])))
+  [x bo]
+  (let [bo-trans (if (= :le bo) reverse identity)]
+    (into-array Byte/TYPE
+                (bo-trans
+                 (map unchecked-byte
+                      [(bit-shift-right x 16)
+                       (bit-shift-right x 8)
+                       x])))))
 
 (defn get-unsigned-medium [buffer]
   (let [bytes (byte-array 3)]
     (.get ^ByteBuffer buffer bytes)
-    (bytes->umedium bytes)))
+    (bytes->umedium bytes :be)))
+
+(defn get-unsigned-medium-le [buffer]
+  (let [bytes (byte-array 3)]
+    (.get ^ByteBuffer buffer bytes)
+    (bytes->umedium bytes :le)))
 
 (defn put-medium [buffer value]
-  (let [bytes (medium->bytes value)]
+  (let [bytes (medium->bytes value :be)]
+    (.put ^ByteBuffer buffer ^bytes bytes)))
+
+(defn put-medium-le [buffer value]
+  (let [bytes (medium->bytes value :le)]
     (.put ^ByteBuffer buffer ^bytes bytes)))
 
 (defmacro with-byte-order [[buf bo] & body]
@@ -162,7 +174,7 @@
    :int16-be (primitive-codec .getShort .putShort 2 identity short identity :be)
 
    :int24 (primitive-codec get-unsigned-medium put-medium 3 umedium->medium int identity)
-   :int24-le (primitive-codec get-unsigned-medium put-medium 3 umedium->medium int identity :le)
+   :int24-le (primitive-codec get-unsigned-medium-le put-medium-le 3 umedium->medium int identity :le)
    :int24-be (primitive-codec get-unsigned-medium put-medium 3 umedium->medium int identity :be)
 
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
@@ -188,7 +200,7 @@
    :uint16-be (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
 
    :uint24 (primitive-codec get-unsigned-medium put-medium 3 identity int identity)
-   :uint24-le (primitive-codec get-unsigned-medium put-medium 3 identity int identity :le)
+   :uint24-le (primitive-codec get-unsigned-medium-le put-medium-le 3 identity int identity :le)
    :uint24-be (primitive-codec get-unsigned-medium put-medium 3 identity int identity :be)
 
    :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
