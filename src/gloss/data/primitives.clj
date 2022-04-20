@@ -71,7 +71,7 @@
    :be `ByteOrder/BIG_ENDIAN
    :ne `(ByteOrder/nativeOrder)})
 
-(defn- native-byte-order []
+(def native-byte-order
   (if (= (ByteOrder/nativeOrder) ByteOrder/LITTLE_ENDIAN)
     :le
     :be))
@@ -169,12 +169,12 @@
    :int16-le (primitive-codec .getShort .putShort 2 identity short identity :le)
    :int16-be (primitive-codec .getShort .putShort 2 identity short identity :be)
 
-   :int24 (primitive-codec (partial get-unsigned-medium (native-byte-order))
-                           (partial put-medium (native-byte-order)) 3 umedium->medium int identity)
+   :int24 (primitive-codec (partial get-unsigned-medium native-byte-order)
+                           (partial put-medium native-byte-order) 3 umedium->medium int identity)
    :int24-le (primitive-codec (partial get-unsigned-medium :le)
-                              (partial put-medium :le) 3 umedium->medium int identity :le)
+                              (partial put-medium :le) 3 umedium->medium int identity)
    :int24-be (primitive-codec (partial get-unsigned-medium :be)
-                              (partial put-medium :be) 3 umedium->medium int identity :be)
+                              (partial put-medium :be) 3 umedium->medium int identity)
 
    :int32 (primitive-codec .getInt .putInt 4 identity int identity)
    :int32-le (primitive-codec .getInt .putInt 4 identity int identity :le)
@@ -198,12 +198,12 @@
    :uint16-le (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :le)
    :uint16-be (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
 
-   :uint24 (primitive-codec (partial get-unsigned-medium (native-byte-order))
-                            (partial put-medium (native-byte-order)) 3 identity int identity)
+   :uint24 (primitive-codec (partial get-unsigned-medium native-byte-order)
+                            (partial put-medium native-byte-order) 3 identity int identity)
    :uint24-le (primitive-codec (partial get-unsigned-medium :le)
-                               (partial put-medium :le) 3 identity int identity :le)
+                               (partial put-medium :le) 3 identity int identity)
    :uint24-be (primitive-codec (partial get-unsigned-medium :be)
-                               (partial put-medium :be) 3 identity int identity :be)
+                               (partial put-medium :be) 3 identity int identity)
 
    :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
    :uint32-le (primitive-codec .getInt .putInt 4 int->uint int uint->int :le)
