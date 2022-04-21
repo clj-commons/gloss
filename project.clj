@@ -7,8 +7,12 @@
                  [org.clj-commons/byte-streams "0.3.0"]
                  [potemkin/potemkin "0.4.5"]]
 
-  :profiles {:dev {:dependencies [[org.clojure/clojure "1.10.3"]]}}
+  :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.1"]]}
+             :ci {:javac-options ["-target" "1.8" "-source" "1.8"]
+                  :dependencies [[org.clojure/clojure "1.11.1"]]}}
   :cljfmt {:indents {#".*" [[:inner 0]]}}
+
+  :plugins [[jonase/eastwood "1.2.3"]]
 
   :global-vars {*warn-on-reflection* true}
   :javac-options ["-target" "1.8" "-source" "1.8"])

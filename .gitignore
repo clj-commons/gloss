@@ -9,4 +9,4 @@ target
 /checkouts/
 .cpcache/
 **/.clj-kondo/.cache
-
+.eastwood
