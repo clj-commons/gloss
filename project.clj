@@ -1,8 +1,12 @@
 (defproject org.clj-commons/gloss "0.3.0"
   :description "Speaks in bytes, so that you don't have to"
+  
+  :url "https://github.com/clj-commons/gloss"
+  :scm {:name "git" :url "https://github.com/clj-commons/gloss"}
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo}
+
   :dependencies [[manifold/manifold "0.2.3"]
                  [org.clj-commons/byte-streams "0.3.0"]
                  [potemkin/potemkin "0.4.5"]]
