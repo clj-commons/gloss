@@ -1,0 +1,13 @@
+=== 0.3.0
+
+* Fix private metadata for `defcodec`
+* Prepare for clj-commons and CircleCI
+* Fix JDK 11+ reflection bug
+* Update `byte-streams` dep to 0.3.0
+* Remove `eval` use that interferes with Graal
+* Add support for int24 and uint24 primitive types
+* Update CircleCI with deploy job and new Docker image
+* Clean up for Eastwood
+
+Contributions by Zach Tellman, Alexander Kahl, Mihir Rege, Erik Assum, Matthew Davidson, skynet, and Ning Sun
+
