@@ -8,9 +8,8 @@
 
 (ns ^{:skip-wiki true}
   gloss.core.protocols
-  (:use
-	[potemkin]
-    [gloss.core formats])
+  (:require [potemkin :refer :all]
+            [gloss.core.formats :refer :all])
   (:import
     [java.nio Buffer ByteBuffer]
     [gloss.data.bytes.core SingleBufferSequence]))

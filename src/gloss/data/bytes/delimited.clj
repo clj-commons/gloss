@@ -8,12 +8,12 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.bytes.delimited
-  (:use
-    gloss.data.bytes.core
-    gloss.core.protocols
-    gloss.core.formats
-    clojure.pprint
-    clojure.walk)
+  (:require
+    [gloss.data.bytes.core :refer :all]
+    [gloss.core.protocols :refer :all]
+    [gloss.core.formats :refer :all]
+    [clojure.pprint :refer :all]
+    [clojure.walk :refer :all])
   (:import
     [java.nio
      Buffer

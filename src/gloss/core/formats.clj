@@ -9,9 +9,8 @@
 (ns ^{:skip-wiki true}
   gloss.core.formats
   (:require
-    [clj-commons.byte-streams :as bs])
-  (:use
-    [gloss.data.bytes.core])
+    [clj-commons.byte-streams :as bs]
+    [gloss.data.bytes.core :refer :all])
   (:import
     [java.nio
      Buffer

@@ -8,9 +8,13 @@
 
 (ns ^{:skip-wiki true}
   gloss.core.codecs
-  (:use
-    [gloss.data bytes string primitives]
-    [gloss.core protocols structure formats]))
+  (:require
+    [gloss.core.formats :refer :all]
+		[gloss.core.protocols :refer :all]
+		[gloss.core.structure :refer :all]
+		[gloss.data.bytes :refer :all ]
+		[gloss.data.primitives :refer :all]
+		[gloss.data.string :refer :all]))
 
 ;;;
 

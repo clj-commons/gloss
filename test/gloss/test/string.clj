@@ -7,10 +7,12 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.test.string
-  (:use
-    [gloss.data bytes string]
-    [gloss.core protocols formats]
-    [clojure test]))
+  (:require
+    [clojure.test :refer :all]
+    [gloss.core.formats :refer :all]
+    [gloss.core.protocols :refer :all]
+    [gloss.data.bytes :refer :all]
+    [gloss.data.string :refer :all]))
 
 (defn split-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]

@@ -7,14 +7,15 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.io
-  (:use
-    [gloss.core codecs structure protocols]
-    [potemkin])
   (:require
+    [gloss.core.codecs :refer :all]
+    [gloss.core.protocols :refer :all]
+    [gloss.core.structure :refer :all]
     [manifold.deferred :as d]
     [manifold.stream :as s]
     [gloss.core.formats :as formats]
-    [gloss.data.bytes :as bytes])
+    [gloss.data.bytes :as bytes]
+    [potemkin :refer :all])
   (:import
     [java.nio.channels
      Channels]

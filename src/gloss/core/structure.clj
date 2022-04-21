@@ -8,12 +8,12 @@
 
 (ns ^{:skip-wiki true}
   gloss.core.structure
-  (:use
-    [clojure.walk]
-    [gloss.core protocols]
-    [gloss.data primitives bytes])
   (:require
-    [clojure.zip :as z])
+    [clojure.walk :refer :all]
+		[clojure.zip :as z]
+    [gloss.core.protocols :refer :all]
+		[gloss.data.bytes :refer :all]
+		[gloss.data.primitives :refer :all])
   (:import
     [java.nio
      ByteBuffer]))

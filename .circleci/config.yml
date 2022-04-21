@@ -59,7 +59,7 @@ jobs:
       # run tests!
       - run: lein with-profile ci do clean, test
 
-#      - run: lein eastwood
+      - run: lein eastwood
 
   deploy:
     docker:

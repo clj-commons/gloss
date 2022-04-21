@@ -8,17 +8,17 @@
 
 (ns gloss.core
   (:use
-    potemkin
-    [gloss.core.protocols :exclude (sizeof)]
-    [gloss.data primitives]
-    [gloss.core.formats :only (to-byte-buffer to-buf-seq string-to-byte-buffer)])
+    [gloss.core.protocols :exclude [sizeof]])
   (:require
+    [gloss.core.formats :refer [to-byte-buffer to-buf-seq string-to-byte-buffer]]
     [gloss.core.protocols :as protocols]
     [gloss.data.bytes :as bytes]
+    [gloss.data.primitives :refer :all]
     [gloss.core.formats :as formats]
     [gloss.data.string :as string]
     [gloss.core.codecs :as codecs]
-    [gloss.core.structure :as structure]))
+    [gloss.core.structure :as structure]
+    [potemkin :refer :all]))
 
 ;;;
 

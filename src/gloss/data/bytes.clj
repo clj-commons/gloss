@@ -8,13 +8,13 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.bytes
-  (:use
-    [potemkin]
-    [gloss.core formats protocols])
   (:require
+    [gloss.core.formats :refer :all]
+    [gloss.core.protocols :refer :all]
     [gloss.data.bytes.delimited :as delimited]
     [gloss.data.bytes.core :as core]
-    [gloss.data.bytes.bits :as bits])
+    [gloss.data.bytes.bits :as bits]
+    [potemkin :refer :all])
   (:import
     [gloss.data.bytes.core
      SingleBufferSequence
@@ -29,7 +29,6 @@
 (import-fn core/drop-bytes)
 (import-fn core/take-contiguous-bytes)
 (import-fn core/rewind-bytes)
-(import-fn core/duplicate)
 (import-fn core/concat-bytes)
 
 (import-fn delimited/delimited-codec)

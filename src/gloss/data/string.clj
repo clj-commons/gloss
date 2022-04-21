@@ -8,8 +8,8 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.string
-  (:use
-    [potemkin])
+  (:require
+    [potemkin :refer :all])
   (:require
     [gloss.data.string.core :as core]
     [gloss.data.string.codecs :as codecs]))

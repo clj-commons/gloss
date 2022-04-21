@@ -13,6 +13,7 @@
   :cljfmt {:indents {#".*" [[:inner 0]]}}
 
   :plugins [[jonase/eastwood "1.2.3"]]
+  :eastwood {:exclude-linters [:non-dynamic-earmuffs :unlimited-use :unused-meta-on-macro]}
 
   :global-vars {*warn-on-reflection* true}
   :javac-options ["-target" "1.8" "-source" "1.8"])

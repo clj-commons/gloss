@@ -8,10 +8,11 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.string.codecs
-  (:use
-    [gloss.core formats protocols]
-    [gloss.data.bytes]
-    [gloss.data.string.core])
+  (:require
+		[gloss.core.formats :refer :all]
+		[gloss.core.protocols :refer :all]
+		[gloss.data.bytes :refer :all]
+    [gloss.data.string.core :refer :all])
   (:import
     [java.nio
      Buffer

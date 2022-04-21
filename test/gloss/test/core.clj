@@ -7,14 +7,16 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.test.core
-  (:use
-   [gloss core io]
-   [gloss.core.formats :only (to-char-buffer)]
-   [gloss.core.protocols :only (write-bytes read-bytes)]
-   [gloss.data.bytes :only (take-bytes drop-bytes dup-bytes take-contiguous-bytes buf->string)]
-   [clojure test walk])
   (:require
-   [manifold.stream :as s]))
+    [clojure.test :refer :all]
+    [clojure.walk :refer :all]
+    [gloss.core :refer :all]
+    [gloss.io :refer :all]
+    [gloss.core.formats :refer [to-char-buffer]]
+    [gloss.core.protocols :refer [write-bytes read-bytes]]
+    [gloss.data.bytes :refer [take-bytes drop-bytes dup-bytes take-contiguous-bytes buf->string]]
+    [manifold.stream :as s])
+  (:import (java.nio ByteBuffer)))
 
 (defn convert-char-sequences [x]
   (postwalk
@@ -314,7 +316,7 @@
    "abc"))
 
 (defmacro is-encoded [vec codec data]
-  `(is (= ~vec (into [] (.array (first (encode ~codec ~data)))))))
+  `(is (= ~vec (into [] (.array ^ByteBuffer (first (encode ~codec ~data)))))))
 
 (deftest test-int24s
   (testing "numbers"

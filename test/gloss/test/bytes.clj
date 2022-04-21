@@ -7,11 +7,11 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns gloss.test.bytes
-  (:use
-    [gloss.data bytes]
-    [gloss.data.bytes.delimited :only (delimited-bytes-splitter)]
-    [gloss.core formats])
-  (:use [clojure test])
+  (:require
+    [clojure.test :refer :all]
+    [gloss.data.bytes :refer :all]
+    [gloss.data.bytes.delimited :refer [delimited-bytes-splitter]]
+    [gloss.core.formats :refer :all])
   (:import [java.nio ByteBuffer]))
 
 (defn byte-seq [^ByteBuffer buf]

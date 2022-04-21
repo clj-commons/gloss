@@ -8,9 +8,9 @@
 
 (ns ^{:skip-wiki true}
   gloss.data.primitives
-  (:use
-    [gloss.data bytes]
-    [gloss.core protocols])
+  (:require
+    [gloss.data.bytes :refer :all]
+    [gloss.core.protocols :refer :all])
   (:import
     [java.nio
      Buffer
@@ -32,15 +32,15 @@
 
 (defn byte->ubyte
   [x]
-  (bit-and 0xFF (Short. (short x))))
+  (bit-and 0xFF (Short/valueOf (short x))))
 
 (defn short->ushort
   [x]
-  (bit-and 0xFFFF (Integer. (int x))))
+  (bit-and 0xFFFF (Integer/valueOf (int x))))
 
 (defn int->uint
   [x]
-  (bit-and 0xFFFFFFFF (Long. (long x))))
+  (bit-and 0xFFFFFFFF (Long/valueOf (long x))))
 
 (defn long->byte-array [^long n]
   (-> (ByteBuffer/allocate 8) (.putLong n) .array))
@@ -52,15 +52,15 @@
 
 (defn ubyte->byte
   [x]
-  (.byteValue (Short. (short x))))
+  (.byteValue (Short/valueOf (short x))))
 
 (defn ushort->short
   [x]
-  (.shortValue (Integer. (int x))))
+  (.shortValue (Integer/valueOf (int x))))
 
 (defn uint->int
   [x]
-  (.intValue (Long. (long x))))
+  (.intValue (Long/valueOf (long x))))
 
 (defn ulong->long
   [x]
