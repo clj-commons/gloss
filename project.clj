@@ -7,6 +7,11 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo}
 
+  :deploy-repositories [["clojars" {:url "https://repo.clojars.org"
+                                    :username :env/clojars_username
+                                    :password :env/clojars_password
+                                    :sign-releases true}]]          
+
   :dependencies [[manifold/manifold "0.2.3"]
                  [org.clj-commons/byte-streams "0.3.0"]
                  [potemkin/potemkin "0.4.5"]]
