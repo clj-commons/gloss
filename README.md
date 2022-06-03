@@ -1,5 +1,5 @@
-[![Clojars Project](https://img.shields.io/clojars/v/gloss.svg)](https://clojars.org/org.clj-commons/gloss)
-[![cljdoc badge](https://cljdoc.org/badge/gloss/gloss)](https://cljdoc.org/d/org.clj-commons/gloss)
+[![Clojars Project](https://img.shields.io/clojars/v/org.clj-commons/gloss.svg)](https://clojars.org/org.clj-commons/gloss)
+[![cljdoc badge](https://cljdoc.org/badge/org.clj-commons/gloss)](https://cljdoc.org/d/org.clj-commons/gloss)
 [![CircleCI](https://circleci.com/gh/clj-commons/gloss.svg?style=svg)](https://circleci.com/gh/clj-commons/gloss)
 
 Gloss is a byte-format DSL. It can turn complicated byte formats into Clojure data structures, allowing
@@ -8,7 +8,7 @@ compact byte representations, allowing for efficient use of bandwidth and disk.
 
 Read more about it in [the wiki](https://github.com/clj-commons/gloss/wiki).
 
-## usage
+## Usage
 
 To add Gloss as a dependency:
 
@@ -22,11 +22,11 @@ deps.edn:
 org.clj-commons/gloss {:mvn/version "0.3.0"}
 ```
 
-## documentation
+## Documentation
 
-The full API documentation can be found [here](https://cljdoc.org/d/org.clj-commons/gloss).
+The full API documentation can be found at [cljdoc](https://cljdoc.org/d/org.clj-commons/gloss).
 
-## license
+## License
 
 Copyright © 2014 Zach Tellman
 
