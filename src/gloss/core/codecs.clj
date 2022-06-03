@@ -10,53 +10,53 @@
   gloss.core.codecs
   (:require
     [gloss.core.formats :refer :all]
-		[gloss.core.protocols :refer :all]
-		[gloss.core.structure :refer :all]
-		[gloss.data.bytes :refer :all ]
-		[gloss.data.primitives :refer :all]
-		[gloss.data.string :refer :all]))
+    [gloss.core.protocols :refer :all]
+    [gloss.core.structure :refer :all]
+    [gloss.data.bytes :refer :all]
+    [gloss.data.primitives :refer :all]
+    [gloss.data.string :refer :all]))
 
 ;;;
 
 (defn header [codec header->body body->header]
   (let [read-codec (compose-callback
-		     codec
-		     (fn [v b]
-		       (let [body (header->body v)]
-			 (read-bytes body b))))]
+                     codec
+                     (fn [v b]
+                       (let [body (header->body v)]
+                         (read-bytes body b))))]
     (reify
       Reader
       (read-bytes [_ buf-seq]
-	(read-bytes read-codec buf-seq))
+        (read-bytes read-codec buf-seq))
       Writer
       (sizeof [_]
-	nil)
+        nil)
       (write-bytes [_ buf val]
-	(let [header (body->header val)
-	      body (header->body header)]
-	  (if (and (sizeof codec) (sizeof body))
-	    (with-buffer [buf (+ (sizeof codec) (sizeof body))]
-	      (write-bytes codec buf header)
-	      (write-bytes body buf val))
-	    (concat
-	      (write-bytes codec buf header)
-	      (write-bytes body buf val))))))))
+        (let [header (body->header val)
+              body (header->body header)]
+          (if (and (sizeof codec) (sizeof body))
+            (with-buffer [buf (+ (sizeof codec) (sizeof body))]
+                         (write-bytes codec buf header)
+                         (write-bytes body buf val))
+            (concat
+              (write-bytes codec buf header)
+              (write-bytes body buf val))))))))
 
 (defn prefix
   [codec to-integer from-integer]
   (let [read-codec (compose-callback
-		     codec
-		     (fn [x b]
-		       [true (to-integer x) b]))]
+                     codec
+                     (fn [x b]
+                       [true (to-integer x) b]))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes read-codec b))
+        (read-bytes read-codec b))
       Writer
       (sizeof [_]
-	(sizeof codec))
+        (sizeof codec))
       (write-bytes [_ buf v]
-	(write-bytes codec buf (from-integer v))))))
+        (write-bytes codec buf (from-integer v))))))
 
 (defn constant-prefix
   [len]
@@ -94,52 +94,52 @@
     Reader
     (read-bytes [this buf-seq]
       (if (insufficient-bytes? codec buf-seq len vals)
-	[false this buf-seq]
-	(read-prefixed-sequence codec reader buf-seq len vals)))))
+        [false this buf-seq]
+        (read-prefixed-sequence codec reader buf-seq len vals)))))
 
 (defn- read-prefixed-sequence [codec reader buf-seq len vals]
   (loop [buf-seq buf-seq, vals vals, reader reader]
     (if (= (count vals) len)
       [true vals buf-seq]
       (let [[success x b] (read-bytes reader buf-seq)]
-	(if success
-	  (recur b (conj vals x) codec)
-	  [false (prefixed-sequence-reader codec x len vals) b])))))
+        (if success
+          (recur b (conj vals x) codec)
+          [false (prefixed-sequence-reader codec x len vals) b])))))
 
 (defn wrap-prefixed-sequence
   [prefix-codec codec]
   (let [read-codec (compose-callback
-		     (compile-frame prefix-codec)
-		     (fn [len b]
-		       (cond
-			 (zero? len)
-			 [true nil b]
-		       
-			 (insufficient-bytes? codec b len nil)
-			 [false (prefixed-sequence-reader codec codec len []) b]
+                     (compile-frame prefix-codec)
+                     (fn [len b]
+                       (cond
+                         (zero? len)
+                         [true nil b]
 
-			 :else
-			 (read-prefixed-sequence codec codec b len []))))]
+                         (insufficient-bytes? codec b len nil)
+                         [false (prefixed-sequence-reader codec codec len []) b]
+
+                         :else
+                         (read-prefixed-sequence codec codec b len []))))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes read-codec b))
+        (read-bytes read-codec b))
       Writer
       (sizeof [_]
-	nil)
+        nil)
       (write-bytes [_ buf vs]
-	(when-not (sequential? vs)
-	  (throw (Exception. (str "Expected a sequence, but got " vs))))
-	(let [cnt (count vs)]
-	  (if (and (sizeof prefix-codec) (sizeof codec))
-	    (with-buffer [buf (+ (sizeof prefix-codec) (* cnt (sizeof codec)))]
-	      (write-bytes prefix-codec buf cnt)
-	      (doseq [v vs]
-		(write-bytes codec buf v)))
-	    (concat
-	      (write-bytes prefix-codec buf cnt)
-	      (apply concat
-		(map #(write-bytes codec buf %) vs)))))))))
+        (when-not (sequential? vs)
+          (throw (Exception. (str "Expected a sequence, but got " vs))))
+        (let [cnt (count vs)]
+          (if (and (sizeof prefix-codec) (sizeof codec))
+            (with-buffer [buf (+ (sizeof prefix-codec) (* cnt (sizeof codec)))]
+                         (write-bytes prefix-codec buf cnt)
+                         (doseq [v vs]
+                           (write-bytes codec buf v)))
+            (concat
+              (write-bytes prefix-codec buf cnt)
+              (apply concat
+                     (map #(write-bytes codec buf %) vs)))))))))
 
 ;;;
 
@@ -148,28 +148,28 @@
   (if (nil? suffix)
     codec
     (let [suffix (-> suffix to-byte-buffer to-buf-seq)
-	  suffix-length (byte-count suffix)]
+          suffix-length (byte-count suffix)]
       (reify
-	Reader
-	(read-bytes [this b]
-	  (let [len (byte-count b)
-		available (- len suffix-length)]
-	    (if (<= 0 available)
-	      (let [[success x remainder] (read-bytes codec (take-bytes (dup-bytes b) available))]
-		(if success
-		  [true x (concat-bytes
-			    (drop-bytes remainder suffix-length)
-			    (when-not (empty? remainder)
-			      (drop-bytes b available)))]
-		  [false this b]))
-	      [false this b])))
-	Writer
-	(sizeof [_]
-	  nil)
-	(write-bytes [_ buf vs]
-	  (concat
-	    (write-bytes codec nil vs)
-	    suffix))))))
+        Reader
+        (read-bytes [this b]
+          (let [len (byte-count b)
+                available (- len suffix-length)]
+            (if (<= 0 available)
+              (let [[success x remainder] (read-bytes codec (take-bytes (dup-bytes b) available))]
+                (if success
+                  [true x (concat-bytes
+                            (drop-bytes remainder suffix-length)
+                            (when-not (empty? remainder)
+                              (drop-bytes b available)))]
+                  [false this b]))
+              [false this b])))
+        Writer
+        (sizeof [_]
+          nil)
+        (write-bytes [_ buf vs]
+          (concat
+            (write-bytes codec nil vs)
+            suffix))))))
 
 ;;;
 
@@ -185,29 +185,29 @@
                   (long (int %))
                   (long %))
         n->v (if (and (= 1 (count map-or-seq)) (map? (first map-or-seq)))
-	       (let [m (first map-or-seq)]
-		 (zipmap
-		   (map coerce (vals m))
-		   (keys m)))
-	       (zipmap
-		 (map coerce (range (count map-or-seq)))
-		 map-or-seq))
-	v->n (zipmap (vals n->v) (keys n->v))
-	codec (primitive-codecs primitive-type)]
+               (let [m (first map-or-seq)]
+                 (zipmap
+                   (map coerce (vals m))
+                   (keys m)))
+               (zipmap
+                 (map coerce (range (count map-or-seq)))
+                 map-or-seq))
+        v->n (zipmap (vals n->v) (keys n->v))
+        codec (primitive-codecs primitive-type)]
     (reify
       Reader
       (read-bytes [this b]
-	(let [[success x b] (read-bytes codec b)]
-	  (if success
-	    [true (n->v (coerce x)) b]
-	    [false this b])))
+        (let [[success x b] (read-bytes codec b)]
+          (if success
+            [true (n->v (coerce x)) b]
+            [false this b])))
       Writer
       (sizeof [_]
-	(sizeof codec))
+        (sizeof codec))
       (write-bytes [_ buf v]
-	(if-let [n (v->n v)]
-	  (write-bytes codec buf n)
-	  (throw (Exception. (str "Expected one of " (keys v->n) ", but got " v))))))))
+        (if-let [n (v->n v)]
+          (write-bytes codec buf n)
+          (throw (Exception. (str "Expected one of " (keys v->n) ", but got " v))))))))
 
 ;;;
 
@@ -218,20 +218,20 @@
   [& key-value-pairs]
   (assert (even? (count key-value-pairs)))
   (let [pairs (partition 2 key-value-pairs)
-	ks (map first pairs)
-	vs (map compile-frame (map second pairs))
-	codec (convert-sequence vs)
-	read-codec (compose-callback
-		     codec
-		     (fn [v b] [true (zipmap ks v) b]))]
+        ks (map first pairs)
+        vs (map compile-frame (map second pairs))
+        codec (convert-sequence vs)
+        read-codec (compose-callback
+                     codec
+                     (fn [v b] [true (zipmap ks v) b]))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes read-codec b))
+        (read-bytes read-codec b))
       Writer
       (sizeof [_]
-	(sizeof codec))
+        (sizeof codec))
       (write-bytes [_ buf v]
-	(when-not (map? v)
-	  (throw (Exception. (str "Expected a map, but got " v))))
-	(write-bytes codec buf (map #(get v %) ks))))))
+        (when-not (map? v)
+          (throw (Exception. (str "Expected a map, but got " v))))
+        (write-bytes codec buf (map #(get v %) ks))))))

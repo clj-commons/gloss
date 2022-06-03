@@ -18,9 +18,9 @@
   (let [buf-seq (to-buf-seq bytes)]
     (to-buf-seq
       (apply concat
-	(map
-	  #(take-bytes (drop-bytes buf-seq %) 1)
-	  (range (byte-count buf-seq)))))))
+             (map
+               #(take-bytes (drop-bytes buf-seq %) 1)
+               (range (byte-count buf-seq)))))))
 
 (def ^String pilcrow-string (apply str (repeat 30 "¶")))
 (def pilcrows (.getBytes pilcrow-string "utf-8"))
@@ -32,7 +32,7 @@
   (doseq [i (range 1 61)]
     (when (zero? (rem 60 i))
       (let [segments (split-bytes i pilcrows)
-	    consumer (string-codec "utf-8")]
-	(is (= pilcrow-string (apply str (frame-seq consumer segments))))))))
+            consumer (string-codec "utf-8")]
+        (is (= pilcrow-string (apply str (frame-seq consumer segments))))))))
 
 

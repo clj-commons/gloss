@@ -47,7 +47,7 @@
 (defn string-to-byte-buffer
   ([s ^String charset]
    (->> s
-     (map #(if (string? %) (.getBytes ^String % charset) %))
-     (map to-byte-buffer)))
+        (map #(if (string? %) (.getBytes ^String % charset) %))
+        (map to-byte-buffer)))
   ([s]
-     (string-to-byte-buffer s "utf-8")))
+   (string-to-byte-buffer s "utf-8")))

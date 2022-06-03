@@ -20,17 +20,17 @@
 
 (defn convert-char-sequences [x]
   (postwalk
-   #(if (instance? CharSequence %)
-      (str %)
-      %)
-   x))
+    #(if (instance? CharSequence %)
+       (str %)
+       %)
+    x))
 
 (defn convert-buf-seqs [x]
   (postwalk
-   #(if (and (sequential? %) (instance? java.nio.ByteBuffer (first %)))
-      [(contiguous %)]
-      %)
-   x))
+    #(if (and (sequential? %) (instance? java.nio.ByteBuffer (first %)))
+       [(contiguous %)]
+       %)
+    x))
 
 (defmacro big-int? [x]
   (if (= 2 (:minor *clojure-version*))
@@ -52,16 +52,16 @@
 
 (defn is= [a b]
   (is
-   (= (convert-string-sequence a) (convert-result b))
-   (str (prn-str a) (prn-str b))))
+    (= (convert-string-sequence a) (convert-result b))
+    (str (prn-str a) (prn-str b))))
 
 (defn partition-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
     (to-buf-seq
-     (apply concat
-            (map
-             #(take-bytes (drop-bytes buf-seq %) 1)
-             (range (byte-count buf-seq)))))))
+      (apply concat
+             (map
+               #(take-bytes (drop-bytes buf-seq %) 1)
+               (range (byte-count buf-seq)))))))
 
 (defn split-bytes [index bytes]
   (let [bytes (-> bytes to-buf-seq dup-bytes)]
@@ -116,76 +116,76 @@
 
 (deftest test-lists
   (test-roundtrip
-   [:float32-be nil-frame :float32-le]
-   [1 nil 2])
+    [:float32-be nil-frame :float32-le]
+    [1 nil 2])
   (test-roundtrip
-   [:ubyte :uint16-le :uint32 :uint64-be]
-   [0xFF 0xFFFF 0xFFFFFFFF 0xFFFFFFFFFFFFFFFF])
+    [:ubyte :uint16-le :uint32 :uint64-be]
+    [0xFF 0xFFFF 0xFFFFFFFF 0xFFFFFFFFFFFFFFFF])
   (test-roundtrip
-   [:a :byte :float64 :b]
-   [:a 1 2 :b])
+    [:a :byte :float64 :b]
+    [:a 1 2 :b])
   (test-roundtrip
-   [:int16 [:int32 [:int64]]]
-   [1 [2 [3]]]))
+    [:int16 [:int32 [:int64]]]
+    [1 [2 [3]]]))
 
 (deftest test-maps
   (test-roundtrip
-   {:a :int32 :b :int32}
-   {:a 1 :b 2})
+    {:a :int32 :b :int32}
+    {:a 1 :b 2})
   (test-roundtrip
-   {:a :int32 :b [:int32 :int32]}
-   {:a 1 :b [2 3]})
+    {:a :int32 :b [:int32 :int32]}
+    {:a 1 :b [2 3]})
   (test-roundtrip
-   {:a :int32 :b {:c {:d :int16}}}
-   {:a 1 :b {:c {:d 2}}})
+    {:a :int32 :b {:c {:d :int16}}}
+    {:a 1 :b {:c {:d 2}}})
   (test-roundtrip
-   [{:a :int32} {:b [:float64 :float32]}]
-   [{:a 1} {:b [2 3]}]))
+    [{:a :int32} {:b [:float64 :float32]}]
+    [{:a 1} {:b [2 3]}]))
 
 (deftest test-repeated
   (test-roundtrip
-   (repeated :int32)
-   (range 10))
+    (repeated :int32)
+    (range 10))
   (test-roundtrip
-   (repeated [:byte :byte])
-   (partition 2 (range 100)))
+    (repeated [:byte :byte])
+    (partition 2 (range 100)))
   (test-roundtrip
-   (repeated :byte :delimiters [64])
-   (range 10))
+    (repeated :byte :delimiters [64])
+    (range 10))
   (test-roundtrip
-   (repeated (string :utf-8 :delimiters ["/n"]) :delimiters ["/0"])
-   ["foo" "bar" "baz"])
+    (repeated (string :utf-8 :delimiters ["/n"]) :delimiters ["/0"])
+    ["foo" "bar" "baz"])
   (test-roundtrip
-   (repeated {:a :int32 :b :int32})
-   (repeat 10 {:a 1 :b 2}))
+    (repeated {:a :int32 :b :int32})
+    (repeat 10 {:a 1 :b 2}))
   (test-roundtrip
-   (repeated :int32 :prefix (prefix :byte))
-   (range 10))
+    (repeated :int32 :prefix (prefix :byte))
+    (range 10))
   (test-roundtrip
-   (repeated :byte :prefix :int32)
-   (range 10))
+    (repeated :byte :prefix :int32)
+    (range 10))
   (test-roundtrip
-   (finite-frame (prefix :int16)
-                 (repeated :int32 :prefix :none))
-   (range 10))
+    (finite-frame (prefix :int16)
+                  (repeated :int32 :prefix :none))
+    (range 10))
   (test-roundtrip
-   [:byte (repeated :int32)]
-   [1 [2]]))
+    [:byte (repeated :int32)]
+    [1 [2]]))
 
 (deftest test-finite-block
   (test-roundtrip
-   [:byte :int16
-    (finite-block
-     (prefix :int64
-             #(- % 4)
-             #(+ % 4)))
-    (finite-block 3)
-    {:abc (finite-block 3)}]
-   [1
-    1
-    (encode (repeated :int16) (range 5))
-    (encode (string :ascii) "abc")
-    {:abc (encode (string :ascii) "abc")}]))
+    [:byte :int16
+     (finite-block
+       (prefix :int64
+               #(- % 4)
+               #(+ % 4)))
+     (finite-block 3)
+     {:abc (finite-block 3)}]
+    [1
+     1
+     (encode (repeated :int16) (range 5))
+     (encode (string :ascii) "abc")
+     {:abc (encode (string :ascii) "abc")}]))
 
 (deftest test-complex-prefix
   (let [p (prefix [:byte :byte]
@@ -198,8 +198,8 @@
 (deftest test-simple-header
   (let [b->h (fn [body]
                (get
-                {:a 1 :b 2 :c 3}
-                (first body)))
+                 {:a 1 :b 2 :c 3}
+                 (first body)))
         h->b (fn [hd]
                (condp = hd
                  1 (compile-frame [:a :int16])
@@ -226,94 +226,94 @@
 
 (deftest test-enum
   (test-roundtrip
-   (enum :byte :a :b :c)
-   :a)
+    (enum :byte :a :b :c)
+    :a)
   (test-roundtrip
-   (enum :int16 {:a 100 :b 1000 :c \c})
-   :c))
+    (enum :int16 {:a 100 :b 1000 :c \c})
+    :c))
 
 (deftest test-bit-seq
   (test-roundtrip
-   (bit-seq 4 4)
-   [1 15])
+    (bit-seq 4 4)
+    [1 15])
   (test-roundtrip
-   (bit-seq 6 1 1)
-   [31 true false])
+    (bit-seq 6 1 1)
+    [31 true false])
   (test-roundtrip
-   (apply bit-seq (range 1 16))
-   (cons false (rest (range 1 16))))
+    (apply bit-seq (range 1 16))
+    (cons false (rest (range 1 16))))
   (test-roundtrip
-   (apply bit-seq (range 1 16))
-   (cons false (take 14 (repeat 0))))
+    (apply bit-seq (range 1 16))
+    (cons false (take 14 (repeat 0))))
   (test-roundtrip
-   [:int32 (bit-seq 4 4 4 4) :float32]
-   [1 [13 12 1 5] 6.0]))
+    [:int32 (bit-seq 4 4 4 4) :float32]
+    [1 [13 12 1 5] 6.0]))
 
 (deftest test-bit-map
   (test-roundtrip
-   (bit-map :a 4 :b 4)
-   {:a 1 :b 15})
+    (bit-map :a 4 :b 4)
+    {:a 1 :b 15})
   (test-roundtrip
-   (bit-map :a 7 :b 1)
-   {:a 63, :b false}))
+    (bit-map :a 7 :b 1)
+    {:a 63, :b false}))
 
 (deftest test-string
   (test-roundtrip
-   (string :utf-8)
-   "abcd")
+    (string :utf-8)
+    "abcd")
   (test-roundtrip
-   (repeated (string :utf-8 :delimiters ["\0"]))
-   ["abc" "def"])
+    (repeated (string :utf-8 :delimiters ["\0"]))
+    ["abc" "def"])
   (test-roundtrip
-   [:a (string :utf-8 :delimiters ["xy" "xyz"])]
-   [:a "abc"])
+    [:a (string :utf-8 :delimiters ["xy" "xyz"])]
+    [:a "abc"])
   (test-roundtrip
-   (string :utf-8 :length 3)
-   "foo")
+    (string :utf-8 :length 3)
+    "foo")
   (test-roundtrip
-   (string :utf-8 :length 3 :suffix "z")
-   "foo")
+    (string :utf-8 :length 3 :suffix "z")
+    "foo")
   (test-roundtrip
-   (string :utf-8 :suffix "z" :delimiters ["\r\n"])
-   "foobar")
+    (string :utf-8 :suffix "z" :delimiters ["\r\n"])
+    "foobar")
   (test-roundtrip
-   (finite-frame 5 (string :utf-8))
-   "abcde"))
+    (finite-frame 5 (string :utf-8))
+    "abcde"))
 
 (deftest test-string-numbers
   (test-roundtrip
-   (repeated (string-integer :utf-8 :length 5))
-   [12345 67890 123 45])
+    (repeated (string-integer :utf-8 :length 5))
+    [12345 67890 123 45])
   (test-roundtrip
-   (repeated (string-float :utf-8 :length 5))
-   [123.4 67.89 1.23 4.5])
+    (repeated (string-float :utf-8 :length 5))
+    [123.4 67.89 1.23 4.5])
   (test-roundtrip
-   (repeated (string-integer :ascii :delimiters ["x"]))
-   [1 23 456 7890])
+    (repeated (string-integer :ascii :delimiters ["x"]))
+    [1 23 456 7890])
   (test-roundtrip
-   (repeated (string-float :ascii :delimiters ["x"]))
-   [(/ 3 2) 1.5 0.66666])
+    (repeated (string-float :ascii :delimiters ["x"]))
+    [(/ 3 2) 1.5 0.66666])
   (test-roundtrip
-   (repeated :int32
-             :prefix (prefix (string-integer :ascii :delimiters ["x"])))
-   [1 2 3]))
+    (repeated :int32
+              :prefix (prefix (string-integer :ascii :delimiters ["x"])))
+    [1 2 3]))
 
 (deftest test-ordered-map
   (test-roundtrip
-   (ordered-map :b :int32 :a :int32)
-   {:a 1 :b 2})
+    (ordered-map :b :int32 :a :int32)
+    {:a 1 :b 2})
   (test-roundtrip
-   (ordered-map :b :int32 :a [:int32 :int32])
-   {:a [2 3] :b 1}))
+    (ordered-map :b :int32 :a [:int32 :int32])
+    {:a [2 3] :b 1}))
 
 (deftest test-netstrings
   (test-roundtrip
-   (finite-frame
-    (prefix (string-integer :ascii :delimiters [":"])
-            inc
-            dec)
-    (string :utf-8 :suffix ","))
-   "abc"))
+    (finite-frame
+      (prefix (string-integer :ascii :delimiters [":"])
+              inc
+              dec)
+      (string :utf-8 :suffix ","))
+    "abc"))
 
 (defmacro is-encoded [vec codec data]
   `(is (= ~vec (into [] (.array ^ByteBuffer (first (encode ~codec ~data)))))))
@@ -321,19 +321,19 @@
 (deftest test-int24s
   (testing "numbers"
     (test-roundtrip
-     [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
-     (repeat 6 100)))
+      [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
+      (repeat 6 100)))
   (testing "numbers greater than int16 range"
     (test-roundtrip
-     [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
-     (repeat 6 32779)))
+      [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
+      (repeat 6 32779)))
   (testing "edge cases"
     (test-roundtrip
-     [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
-     [8388607 8388607 8388607 16777215 16777215 16777215])
+      [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
+      [8388607 8388607 8388607 16777215 16777215 16777215])
     (test-roundtrip
-     [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
-     [-8388608 -8388608 -8388608 0 0 0]))
+      [:int24 :int24-le :int24-be :uint24 :uint24-le :uint24-be]
+      [-8388608 -8388608 -8388608 0 0 0]))
   (testing "checking results against netty codec output"
     (is-encoded [-20 -5 -1] [:int24-le] [-1044])
     (is-encoded [-1 -5 -20] [:int24-be] [-1044])

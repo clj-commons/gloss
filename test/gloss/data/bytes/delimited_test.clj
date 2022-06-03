@@ -10,7 +10,7 @@
 (deftest match-loop
   (testing "one"
     (let [d1 (ByteBuffer/allocate 1)
-          ml (delimited/match-loop 
+          ml (delimited/match-loop
                [d1]
                false)]
       (is (= [true 1 1]
@@ -21,7 +21,7 @@
     (let [d1 (ByteBuffer/allocate 1)
           d2 (ByteBuffer/allocate 2)
           d3 (ByteBuffer/allocate 3)
-          ml (delimited/match-loop 
+          ml (delimited/match-loop
                [d3 d2 d1]
                false)]
       (is (= [true 1 1]

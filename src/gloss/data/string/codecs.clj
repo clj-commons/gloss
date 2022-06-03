@@ -9,9 +9,9 @@
 (ns ^{:skip-wiki true}
   gloss.data.string.codecs
   (:require
-		[gloss.core.formats :refer :all]
-		[gloss.core.protocols :refer :all]
-		[gloss.data.bytes :refer :all]
+    [gloss.core.formats :refer :all]
+    [gloss.core.protocols :refer :all]
+    [gloss.data.bytes :refer :all]
     [gloss.data.string.core :refer :all])
   (:import
     [java.nio
@@ -25,31 +25,31 @@
 
 (defn take-string-from-buf-seq [^CharsetDecoder decoder, buf-seq]
   (let [buf-seq (dup-bytes buf-seq)
-	char-buf (create-char-buf decoder buf-seq)]
+        char-buf (create-char-buf decoder buf-seq)]
     (loop [chars [char-buf], bytes buf-seq]
       (if (empty? bytes)
-	[(rewind-chars chars) nil]
-	(let [bytes (to-buf-seq bytes)
+        [(rewind-chars chars) nil]
+        (let [bytes (to-buf-seq bytes)
               first-buf ^ByteBuffer (first bytes)
-	      result (-> decoder (.decode first-buf (last chars) false))]
-	  (cond
+              result (-> decoder (.decode first-buf (last chars) false))]
+          (cond
 
-	    (.isOverflow result)
-	    (recur (conj chars (create-char-buf decoder bytes)) bytes)
+            (.isOverflow result)
+            (recur (conj chars (create-char-buf decoder bytes)) bytes)
 
-	    (and (.isUnderflow result) (pos? (.remaining first-buf)))
-	    (if (= 1 (count bytes))
-	      [(rewind-chars chars) bytes]
-	      (recur chars
-		(cons
-                  (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
-                  (drop-bytes (rest bytes) 1))))
+            (and (.isUnderflow result) (pos? (.remaining first-buf)))
+            (if (= 1 (count bytes))
+              [(rewind-chars chars) bytes]
+              (recur chars
+                     (cons
+                       (take-contiguous-bytes bytes (inc (.remaining ^ByteBuffer (first bytes))))
+                       (drop-bytes (rest bytes) 1))))
 
-	    (.isError result)
-	    (.throwException result)
+            (.isError result)
+            (.throwException result)
 
-	    :else
-	    (recur chars (rest bytes))))))))
+            :else
+            (recur chars (rest bytes))))))))
 
 (defn string-codec [charset]
   (reify
@@ -57,24 +57,24 @@
     (read-bytes [this buf-seq]
       (let [buf-seq (to-buf-seq buf-seq)
             decoder (create-decoder charset)]
-	(if (and (single-buffer? buf-seq) complete?)
-	  [true (.decode decoder (.duplicate ^ByteBuffer (first buf-seq))) nil]
-	  (let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
-	    (if (empty? chars)
-	      [true "" bytes]
-	      [true (create-char-sequence chars) bytes])))))
+        (if (and (single-buffer? buf-seq) complete?)
+          [true (.decode decoder (.duplicate ^ByteBuffer (first buf-seq))) nil]
+          (let [[chars bytes] (take-string-from-buf-seq decoder buf-seq)]
+            (if (empty? chars)
+              [true "" bytes]
+              [true (create-char-sequence chars) bytes])))))
     Writer
     (sizeof [_]
       nil)
     (write-bytes [_ _ s]
       (when-not (instance? CharSequence s)
-	(throw (Exception. (str "Expected a CharSequence, but got " s " " (class s)))))
+        (throw (Exception. (str "Expected a CharSequence, but got " s " " (class s)))))
       (cond
-	(empty? s)
-	nil
-	
-	(string? s)
-	[(ByteBuffer/wrap (.getBytes ^String s (name charset)))]
+        (empty? s)
+        nil
 
-	:else
-	[(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))]))))
+        (string? s)
+        [(ByteBuffer/wrap (.getBytes ^String s (name charset)))]
+
+        :else
+        [(.encode ^CharsetEncoder (create-encoder charset) (to-char-buffer s))]))))

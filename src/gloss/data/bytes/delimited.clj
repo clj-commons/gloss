@@ -25,10 +25,10 @@
 
 (defn sort-delimiters [delimiters]
   (->> delimiters
-    (map rewind)
-    (map duplicate)
-    (sort #(compare (.remaining ^ByteBuffer %1) (.remaining ^ByteBuffer %2)))
-    reverse))
+       (map rewind)
+       (map duplicate)
+       (sort #(compare (.remaining ^ByteBuffer %1) (.remaining ^ByteBuffer %2)))
+       reverse))
 
 (defn byte-buffer->byte-seq [^ByteBuffer buf]
   (let [buf ^ByteBuffer (.rewind buf)]
@@ -47,24 +47,24 @@
 
 (defn split-buf-seq [buf-seq min-delimiter-length max-delimiter-length]
   (let [buf-seq (dup-bytes buf-seq)
-	offset (dec max-delimiter-length)
-	dimensions (butlast (reductions + (map #(.remaining ^ByteBuffer %) buf-seq)))]
+        offset (dec max-delimiter-length)
+        dimensions (butlast (reductions + (map #(.remaining ^ByteBuffer %) buf-seq)))]
     (doall
       (concat
-	(mapcat
-	  (fn [[n ^ByteBuffer buf]]
-	    (let [len (.remaining buf)]
-	      [(when (>= len max-delimiter-length)
-		 [(- n len) buf])
-	       [(max 0 (- n offset))
-		(-> buf-seq
-		  (drop-bytes (- n offset))
-		  (take-contiguous-bytes (* 2 offset)))]]))
-	  (map vector dimensions (butlast buf-seq)))
-	(let [last-buf ^ByteBuffer (last buf-seq)]
-	  (when (>= (.remaining last-buf) min-delimiter-length)
-	    [[(or (last dimensions) 0)
-	      (last buf-seq)]]))))))
+        (mapcat
+          (fn [[n ^ByteBuffer buf]]
+            (let [len (.remaining buf)]
+              [(when (>= len max-delimiter-length)
+                 [(- n len) buf])
+               [(max 0 (- n offset))
+                (-> buf-seq
+                    (drop-bytes (- n offset))
+                    (take-contiguous-bytes (* 2 offset)))]]))
+          (map vector dimensions (butlast buf-seq)))
+        (let [last-buf ^ByteBuffer (last buf-seq)]
+          (when (>= (.remaining last-buf) min-delimiter-length)
+            [[(or (last dimensions) 0)
+              (last buf-seq)]]))))))
 
 (defn match-loop [delimiters strip-delimiters?]
   (let [delimiters (sort-delimiters delimiters)
@@ -136,94 +136,94 @@
 
 (defn delimited-bytes-codec
   ([delimiters strip-delimiters?]
-     (delimited-bytes-codec
-       nil
-       (delimited-bytes-splitter delimiters strip-delimiters?)
-       delimiters
-       strip-delimiters?))
+   (delimited-bytes-codec
+     nil
+     (delimited-bytes-splitter delimiters strip-delimiters?)
+     delimiters
+     strip-delimiters?))
   ([scanned take-delimited-bytes delimiters strip-delimiters?]
-     (let [scanned (to-buf-seq scanned)
-	   max-delimiter-length (apply max (map #(.remaining ^ByteBuffer %) delimiters))
-	   split-index (- (byte-count scanned) (dec max-delimiter-length))
-	   prefix (drop-bytes scanned split-index)
-	   scanned (take-bytes scanned split-index)]
-       (reify
-	 Reader
-	 (read-bytes [this b]
-	   (let [[success x xs] (take-delimited-bytes (to-buf-seq (concat prefix b)))]
-	     (if success
-	       [true (to-buf-seq (concat scanned x)) xs]
-	       [false
-		(delimited-bytes-codec
-		  (concat scanned prefix b)
-		  take-delimited-bytes
-		  delimiters
-		  strip-delimiters?)
-		nil])))
-	 Writer
-	 (sizeof [_]
-	   nil)
-	 (write-bytes [_ _ v]
-	   (concat v [(duplicate (first delimiters))]))))))
+   (let [scanned (to-buf-seq scanned)
+         max-delimiter-length (apply max (map #(.remaining ^ByteBuffer %) delimiters))
+         split-index (- (byte-count scanned) (dec max-delimiter-length))
+         prefix (drop-bytes scanned split-index)
+         scanned (take-bytes scanned split-index)]
+     (reify
+       Reader
+       (read-bytes [this b]
+         (let [[success x xs] (take-delimited-bytes (to-buf-seq (concat prefix b)))]
+           (if success
+             [true (to-buf-seq (concat scanned x)) xs]
+             [false
+              (delimited-bytes-codec
+                (concat scanned prefix b)
+                take-delimited-bytes
+                delimiters
+                strip-delimiters?)
+              nil])))
+       Writer
+       (sizeof [_]
+         nil)
+       (write-bytes [_ _ v]
+         (concat v [(duplicate (first delimiters))]))))))
 
 (defn default-value->delimiter [delims buf]
   delims)
 
 (defn delimited-codec
   ([delimiters codec]
-     (delimited-codec delimiters true codec))
+   (delimited-codec delimiters true codec))
   ([delimiters strip-delimiters? codec]
-     (delimited-codec delimiters strip-delimiters? codec (partial default-value->delimiter delimiters)))
+   (delimited-codec delimiters strip-delimiters? codec (partial default-value->delimiter delimiters)))
   ([delimiters strip-delimiters? codec bytes->delimiter]
-     (let [delimiters (map duplicate delimiters)
-	   delimited-codec (compose-callback
-			     (delimited-bytes-codec delimiters strip-delimiters?)
-			     (fn [bytes remainder]
-			       (let [[success v remainder*]
-				     (binding [complete? true]
-				       (read-bytes codec (to-buf-seq bytes)))]
-				 (assert success)
-				 (assert (empty? remainder*))
-				 [true v remainder])))]
-       (reify
-	 Reader
-	 (read-bytes [_ b]
-	   (read-bytes delimited-codec b))
-	 Writer
-	 (sizeof [_]
-	   nil)
-	 (write-bytes [_ buf v]
-	   (concat
-	     (if (sizeof codec)
-	       (with-buffer [buf (sizeof codec)]
-		 (write-bytes codec buf v))
-	       (write-bytes codec buf v))
-	     [(duplicate (first (bytes->delimiter v)))]))))))
+   (let [delimiters (map duplicate delimiters)
+         delimited-codec (compose-callback
+                           (delimited-bytes-codec delimiters strip-delimiters?)
+                           (fn [bytes remainder]
+                             (let [[success v remainder*]
+                                   (binding [complete? true]
+                                     (read-bytes codec (to-buf-seq bytes)))]
+                               (assert success)
+                               (assert (empty? remainder*))
+                               [true v remainder])))]
+     (reify
+       Reader
+       (read-bytes [_ b]
+         (read-bytes delimited-codec b))
+       Writer
+       (sizeof [_]
+         nil)
+       (write-bytes [_ buf v]
+         (concat
+           (if (sizeof codec)
+             (with-buffer [buf (sizeof codec)]
+                          (write-bytes codec buf v))
+             (write-bytes codec buf v))
+           [(duplicate (first (bytes->delimiter v)))]))))))
 
 (defn wrap-delimited-sequence
   ([delimiters codec]
-     (wrap-delimited-sequence delimiters true codec))
+   (wrap-delimited-sequence delimiters true codec))
   ([delimiters strip-delimiters? codec]
-     (let [delimiters (map duplicate delimiters)
-	   suffix (first delimiters)
-	   sizeof-delimiter (.remaining ^Buffer suffix)
-	   read-codec (compose-callback
-			(delimited-bytes-codec delimiters strip-delimiters?)
-			(take-all codec))]
-       (reify
-	 Reader
-	 (read-bytes [_ b]
-	   (read-bytes read-codec b))
-	 Writer
-	 (sizeof [_]
-	   nil)
-	 (write-bytes [_ buf vs]
-	   (if (sizeof codec)
-	     (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
-	       (doseq [v vs]
-		 (write-bytes codec buf v))
-	       (.put ^ByteBuffer buf (duplicate suffix)))
-	     (concat
-	       (mapcat #(write-bytes codec buf %) vs)
-	       [(duplicate suffix)])))))))
+   (let [delimiters (map duplicate delimiters)
+         suffix (first delimiters)
+         sizeof-delimiter (.remaining ^Buffer suffix)
+         read-codec (compose-callback
+                      (delimited-bytes-codec delimiters strip-delimiters?)
+                      (take-all codec))]
+     (reify
+       Reader
+       (read-bytes [_ b]
+         (read-bytes read-codec b))
+       Writer
+       (sizeof [_]
+         nil)
+       (write-bytes [_ buf vs]
+         (if (sizeof codec)
+           (with-buffer [buf (+ sizeof-delimiter (* (count vs) (sizeof codec)))]
+                        (doseq [v vs]
+                          (write-bytes codec buf v))
+                        (.put ^ByteBuffer buf (duplicate suffix)))
+           (concat
+             (mapcat #(write-bytes codec buf %) vs)
+             [(duplicate suffix)])))))))
 

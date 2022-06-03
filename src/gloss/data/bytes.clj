@@ -47,47 +47,47 @@
     Reader
     (read-bytes [this b]
       (if (< (byte-count b) len)
-	[false this b]
-	[true (take-bytes b len) (drop-bytes b len)]))
+        [false this b]
+        [true (take-bytes b len) (drop-bytes b len)]))
     Writer
     (sizeof [_]
       len)
     (write-bytes [_ buf v]
       (when-let [v (-> v to-buf-seq dup-bytes)]
-	(if-not buf
-	  v
-	  (core/write-to-buf v buf))))))
+        (if-not buf
+          v
+          (core/write-to-buf v buf))))))
 
 (defn wrap-finite-block
   [prefix-codec codec]
   (let [read-codec (compose-callback
-		     prefix-codec
-		     (fn [len b]
-		       (if (zero? len)
-			 [true nil b]
-			 (read-bytes
-			   (compose-callback
-			     (finite-byte-codec len)
-			     (fn [v b]
-			       (let [[success v b*]
-				     (binding [complete? true]
-				       (read-bytes codec v))]
-				 (assert success)
-				 (assert (empty? b*))
-				[true v b])))
-			   b))))]
+                     prefix-codec
+                     (fn [len b]
+                       (if (zero? len)
+                         [true nil b]
+                         (read-bytes
+                           (compose-callback
+                             (finite-byte-codec len)
+                             (fn [v b]
+                               (let [[success v b*]
+                                     (binding [complete? true]
+                                       (read-bytes codec v))]
+                                 (assert success)
+                                 (assert (empty? b*))
+                                 [true v b])))
+                           b))))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes read-codec b))
+        (read-bytes read-codec b))
       Writer
       (sizeof [_]
-	nil)
+        nil)
       (write-bytes [_ buf v]
-	(let [buf-seq (core/create-buf-seq (write-bytes codec nil v))]
-	  (concat
-	   (write-bytes prefix-codec nil (byte-count buf-seq))
-	   buf-seq))))))
+        (let [buf-seq (core/create-buf-seq (write-bytes codec nil v))]
+          (concat
+            (write-bytes prefix-codec nil (byte-count buf-seq))
+            buf-seq))))))
 
 
 

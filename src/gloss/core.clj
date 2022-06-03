@@ -53,10 +53,10 @@
    (bit-map :a 3, :b 4, :c 1) <=> {:a 3, :b -15, :c false}"
   [& args]
   (let [ks (map first (partition 2 args))
-	vs (map second (partition 2 args))]
+        vs (map second (partition 2 args))]
     (compile-frame (apply bit-seq vs)
-      (fn [val] (map #(get val %) ks))
-      #(zipmap ks %))))
+                   (fn [val] (map #(get val %) ks))
+                   #(zipmap ks %))))
 
 ;;;
 
@@ -142,81 +142,82 @@
    (string :utf-8, :length 3, :char-sequence true)"
   [charset & {:as options}]
   (let [options (merge
-		  {:char-sequence false}
-		  options)
-	charset (name charset)
-	suffix-length (if (:suffix options)
-			(-> options :suffix to-byte-buffer to-buf-seq byte-count)
-			0)]
-    (codecs/wrap-suffixed-codec (:suffix options)
+                  {:char-sequence false}
+                  options)
+        charset (name charset)
+        suffix-length (if (:suffix options)
+                        (-> options :suffix to-byte-buffer to-buf-seq byte-count)
+                        0)]
+    (codecs/wrap-suffixed-codec
+      (:suffix options)
       (compile-frame
-	(cond
-	  (or (:length options) (:prefix options))
-	  (finite-frame (or (:length options) (:prefix options))
-	    (string/string-codec charset))
-	  
-	  (:delimiters options)
-      (let [delimiters (:delimiters options)
-            bytes->delimiter (if (:value->delimiter options)
-                               (:value->delimiter options)
-                               (fn [v] delimiters))]
-      
-        (bytes/delimited-codec
-          (string-to-byte-buffer (:delimiters options) charset)
-          (get options :strip-delimiters? true)
-          (string/string-codec charset)
-          #(string-to-byte-buffer (bytes->delimiter %) charset)))
-	  
-	  :else
-	  (string/string-codec charset))
-	identity
-	(if-not (:char-sequence options)
-	  str
-	  identity)))))
+        (cond
+          (or (:length options) (:prefix options))
+          (finite-frame (or (:length options) (:prefix options))
+                        (string/string-codec charset))
+
+          (:delimiters options)
+          (let [delimiters (:delimiters options)
+                bytes->delimiter (if (:value->delimiter options)
+                                   (:value->delimiter options)
+                                   (fn [v] delimiters))]
+
+            (bytes/delimited-codec
+              (string-to-byte-buffer (:delimiters options) charset)
+              (get options :strip-delimiters? true)
+              (string/string-codec charset)
+              #(string-to-byte-buffer (bytes->delimiter %) charset)))
+
+          :else
+          (string/string-codec charset))
+        identity
+        (if-not (:char-sequence options)
+          str
+          identity)))))
 
 (defn- pad-number [s options]
   (if-not (:length options)
     s
     (let [lo (:length options)
-	  ls (count s)]
+          ls (count s)]
       (cond
-	(< ls lo) (str (apply str (repeat (- lo ls) "0")) s)
-	(> ls lo) (throw (Exception. (str "'" s "' is longer than given length of " lo)))
-	:else s))))
+        (< ls lo) (str (apply str (repeat (- lo ls) "0")) s)
+        (> ls lo) (throw (Exception. (str "'" s "' is longer than given length of " lo)))
+        :else s))))
 
 (defn string-integer
   [charset & {:as options}]
   (let [codec (apply string charset (apply concat options))
-	read-codec (compose-callback
-		     codec
-		     (fn [n b]
-		       [true (Long/parseLong (str n)) b]))]
+        read-codec (compose-callback
+                     codec
+                     (fn [n b]
+                       [true (Long/parseLong (str n)) b]))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes read-codec b))
+        (read-bytes read-codec b))
       Writer
       (sizeof [_]
-	nil)
+        nil)
       (write-bytes [_ _ v]
-	(write-bytes codec nil (pad-number (str (long v)) options))))))
+        (write-bytes codec nil (pad-number (str (long v)) options))))))
 
 (defn string-float
   [charset & {:as options}]
   (let [codec (apply string charset (apply concat options))
-	read-codec (compose-callback
-		     codec
-		     (fn [n b]
-		       [true (Double/parseDouble (str n)) b]))]
+        read-codec (compose-callback
+                     codec
+                     (fn [n b]
+                       [true (Double/parseDouble (str n)) b]))]
     (reify
       Reader
       (read-bytes [_ b]
-	(read-bytes read-codec b))
+        (read-bytes read-codec b))
       Writer
       (sizeof [_]
-	nil)
+        nil)
       (write-bytes [_ _ v]
-	(write-bytes codec nil (pad-number (str (double v)) options))))))
+        (write-bytes codec nil (pad-number (str (double v)) options))))))
 
 (defn header
   "A header is a frame which describes the frame that follows.  The decoded value
@@ -249,9 +250,9 @@
    of the sequence that follows, and 'from-count' must take the length of the sequence and
    return the value of the prefix."
   ([primitive]
-     (prefix primitive identity identity))
+   (prefix primitive identity identity))
   ([signature to-count from-count]
-     (codecs/prefix (compile-frame signature) to-count from-count)))
+   (codecs/prefix (compile-frame signature) to-count from-count)))
 
 (defn repeated
   "Describes a sequence of frames.  By default, the sequence is prefixed with a 32-bit integer
@@ -262,31 +263,31 @@
     (cond
       (:delimiters options)
       (bytes/wrap-delimited-sequence
-	(map to-byte-buffer (:delimiters options))
-	(get options :strip-delimiters? true)
-	codec)
+        (map to-byte-buffer (:delimiters options))
+        (get options :strip-delimiters? true)
+        codec)
 
       (= :none (:prefix options))
       (let [reader (take-all codec)]
-	(reify
-	  Reader
-	  (read-bytes [_ b]
-	    (if (zero? (bytes/byte-count b))
+        (reify
+          Reader
+          (read-bytes [_ b]
+            (if (zero? (bytes/byte-count b))
               [true [] nil]
               (reader b nil)))
-	  Writer
-	  (sizeof [_]
-	    nil)
-	  (write-bytes [_ buf vs]
-	    (if-let [size (sizeof codec)]
-	      (with-buffer [buf (* (count vs) size)]
-		(doseq [v vs]
-		  (write-bytes codec buf v)))
-	      (doall
+          Writer
+          (sizeof [_]
+            nil)
+          (write-bytes [_ buf vs]
+            (if-let [size (sizeof codec)]
+              (with-buffer [buf (* (count vs) size)]
+                           (doseq [v vs]
+                             (write-bytes codec buf v)))
+              (doall
                 (apply concat
-                  (map #(write-bytes codec buf %) vs)))))))
-      
+                       (map #(write-bytes codec buf %) vs)))))))
+
       :else
       (codecs/wrap-prefixed-sequence
-	(or (compile-frame (:prefix options)) (:int32 primitive-codecs))
-	codec))))
+        (or (compile-frame (:prefix options)) (:int32 primitive-codecs))
+        codec))))

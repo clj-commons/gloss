@@ -18,7 +18,7 @@
   (let [buf (duplicate buf)]
     (lazy-seq
       (when (.hasRemaining buf)
-	(cons (.get buf) (byte-seq buf))))))
+        (cons (.get buf) (byte-seq buf))))))
 
 (deftest test-drop-bytes
   (let [bufs (to-buf-seq (map to-byte-buffer (partition 5 (range 100))))]
@@ -37,11 +37,11 @@
 
 (defn- test-split [split-location skip-bytes source split]
   (let [s (mapcat byte-seq source)
-	split (map #(mapcat byte-seq %) (rest split))]
+        split (map #(mapcat byte-seq %) (rest split))]
     (if (<= split-location (count s))
       (is
-	(= [(take split-location s) (drop (+ split-location skip-bytes) s)] split)
-	(with-out-str (prn split-location skip-bytes (map byte-seq source))))
+        (= [(take split-location s) (drop (+ split-location skip-bytes) s)] split)
+        (with-out-str (prn split-location skip-bytes (map byte-seq source))))
       (is (= [() s] split)))))
 
 (defn take-delimited-bytes [buf-seq delimiters strip-delimiters?]
@@ -53,8 +53,8 @@
   (let [bufs (to-buf-seq (map to-byte-buffer (partition 3 (range 12))))]
     (dotimes [i 12]
       (let [delimiters [(to-byte-buffer [i])]]
-	(test-split i 1 bufs (take-delimited-bytes bufs delimiters true))
-	(test-split (inc i) 0 bufs (take-delimited-bytes bufs delimiters false)))))
+        (test-split i 1 bufs (take-delimited-bytes bufs delimiters true))
+        (test-split (inc i) 0 bufs (take-delimited-bytes bufs delimiters false)))))
 
   ;;non-existent delimiters
   (let [bufs (to-buf-seq (map to-byte-buffer (partition 4 (range 100))))]
@@ -65,5 +65,5 @@
   (let [bufs (to-buf-seq (map to-byte-buffer (partition 1 (range 15))))]
     (dotimes [i 11]
       (let [delimiters (map #(to-byte-buffer (range i (+ i %))) (range 1 5))]
-	(test-split (+ i 4) 0 bufs (take-delimited-bytes bufs delimiters false))
-	(test-split i 4 bufs (take-delimited-bytes bufs delimiters true))))))
+        (test-split (+ i 4) 0 bufs (take-delimited-bytes bufs delimiters false))
+        (test-split i 4 bufs (take-delimited-bytes bufs delimiters true))))))

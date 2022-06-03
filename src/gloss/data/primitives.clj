@@ -81,10 +81,10 @@
   (let [bo-trans (if (= :le bo) reverse identity)
         [b0 b1 b2] (bo-trans x)]
     (bit-or
-     (bit-or
-      (bit-shift-left (bit-and b0 0xFF) 16)
-      (bit-shift-left (bit-and b1 0xFF) 8))
-     (bit-shift-left (bit-and b2 0xFF) 0))))
+      (bit-or
+        (bit-shift-left (bit-and b0 0xFF) 16)
+        (bit-shift-left (bit-and b1 0xFF) 8))
+      (bit-shift-left (bit-and b2 0xFF) 0))))
 
 (defn umedium->medium
   [x]
@@ -98,10 +98,10 @@
   (let [bo-trans (if (= :le bo) reverse identity)]
     (into-array Byte/TYPE
                 (bo-trans
-                 (map unchecked-byte
-                      [(bit-shift-right x 16)
-                       (bit-shift-right x 8)
-                       x])))))
+                  (map unchecked-byte
+                       [(bit-shift-right x 16)
+                        (bit-shift-right x 8)
+                        x])))))
 
 (defn get-unsigned-medium [bo buffer]
   (let [bytes (byte-array 3)]
@@ -134,81 +134,81 @@
            (let [first-buf# (first b#)
                  remaining# (.remaining ^Buffer first-buf#)]
              (cond
-              (= ~size remaining#)
-              [true
-               (with-byte-order [first-buf# ~bo]
-                 (~get-transform (~accessor ^ByteBuffer first-buf#)))
-               (rest b#)]
+               (= ~size remaining#)
+               [true
+                (with-byte-order [first-buf# ~bo]
+                                 (~get-transform (~accessor ^ByteBuffer first-buf#)))
+                (rest b#)]
 
-              (< ~size remaining#)
-              [true
-               (with-byte-order [first-buf# ~bo]
-                 (~get-transform (~accessor ^ByteBuffer first-buf#)))
-               (-> b# rewind-bytes (drop-bytes ~size))]
+               (< ~size remaining#)
+               [true
+                (with-byte-order [first-buf# ~bo]
+                                 (~get-transform (~accessor ^ByteBuffer first-buf#)))
+                (-> b# rewind-bytes (drop-bytes ~size))]
 
-              :else
-              (let [buf# (take-contiguous-bytes b# ~size)]
-                [true
-                 (with-byte-order [buf# ~bo]
-                   (~get-transform (~accessor ^ByteBuffer buf#)))
-                 (drop-bytes b# ~size)])))))
+               :else
+               (let [buf# (take-contiguous-bytes b# ~size)]
+                 [true
+                  (with-byte-order [buf# ~bo]
+                                   (~get-transform (~accessor ^ByteBuffer buf#)))
+                  (drop-bytes b# ~size)])))))
        Writer
        (sizeof [_]
          ~size)
        (write-bytes [_ buf# v#]
          (with-buffer [buf# ~size]
-           (with-byte-order [buf# ~bo]
-             (~writer ^ByteBuffer buf# (~typecast (~put-transform v#)))))))))
+                      (with-byte-order [buf# ~bo]
+                                       (~writer ^ByteBuffer buf# (~typecast (~put-transform v#)))))))))
 
 
 
 (def primitive-codecs
-  {:byte (primitive-codec .get .put 1 identity byte to-byte)
+  {:byte       (primitive-codec .get .put 1 identity byte to-byte)
 
-   :int16 (primitive-codec .getShort .putShort 2 identity short identity)
-   :int16-le (primitive-codec .getShort .putShort 2 identity short identity :le)
-   :int16-be (primitive-codec .getShort .putShort 2 identity short identity :be)
+   :int16      (primitive-codec .getShort .putShort 2 identity short identity)
+   :int16-le   (primitive-codec .getShort .putShort 2 identity short identity :le)
+   :int16-be   (primitive-codec .getShort .putShort 2 identity short identity :be)
 
-   :int24 (primitive-codec (partial get-unsigned-medium native-byte-order)
-                           (partial put-medium native-byte-order) 3 umedium->medium int identity)
-   :int24-le (primitive-codec (partial get-unsigned-medium :le)
-                              (partial put-medium :le) 3 umedium->medium int identity)
-   :int24-be (primitive-codec (partial get-unsigned-medium :be)
-                              (partial put-medium :be) 3 umedium->medium int identity)
+   :int24      (primitive-codec (partial get-unsigned-medium native-byte-order)
+                                (partial put-medium native-byte-order) 3 umedium->medium int identity)
+   :int24-le   (primitive-codec (partial get-unsigned-medium :le)
+                                (partial put-medium :le) 3 umedium->medium int identity)
+   :int24-be   (primitive-codec (partial get-unsigned-medium :be)
+                                (partial put-medium :be) 3 umedium->medium int identity)
 
-   :int32 (primitive-codec .getInt .putInt 4 identity int identity)
-   :int32-le (primitive-codec .getInt .putInt 4 identity int identity :le)
-   :int32-be (primitive-codec .getInt .putInt 4 identity int identity :be)
+   :int32      (primitive-codec .getInt .putInt 4 identity int identity)
+   :int32-le   (primitive-codec .getInt .putInt 4 identity int identity :le)
+   :int32-be   (primitive-codec .getInt .putInt 4 identity int identity :be)
 
-   :int64 (primitive-codec .getLong .putLong 8 identity long identity)
-   :int64-le (primitive-codec .getLong .putLong 8 identity long identity :le)
-   :int64-be (primitive-codec .getLong .putLong 8 identity long identity :be)
+   :int64      (primitive-codec .getLong .putLong 8 identity long identity)
+   :int64-le   (primitive-codec .getLong .putLong 8 identity long identity :le)
+   :int64-be   (primitive-codec .getLong .putLong 8 identity long identity :be)
 
-   :float32 (primitive-codec .getFloat .putFloat 4 identity float identity)
+   :float32    (primitive-codec .getFloat .putFloat 4 identity float identity)
    :float32-le (primitive-codec .getFloat .putFloat 4 identity float identity :le)
    :float32-be (primitive-codec .getFloat .putFloat 4 identity float identity :be)
 
-   :float64 (primitive-codec .getDouble .putDouble 8 identity double identity)
+   :float64    (primitive-codec .getDouble .putDouble 8 identity double identity)
    :float64-le (primitive-codec .getDouble .putDouble 8 identity double identity :le)
    :float64-be (primitive-codec .getDouble .putDouble 8 identity double identity :be)
 
-   :ubyte (primitive-codec .get .put 1 byte->ubyte byte ubyte->byte)
+   :ubyte      (primitive-codec .get .put 1 byte->ubyte byte ubyte->byte)
 
-   :uint16 (primitive-codec .getShort .putShort 2 short->ushort short ushort->short)
-   :uint16-le (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :le)
-   :uint16-be (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
+   :uint16     (primitive-codec .getShort .putShort 2 short->ushort short ushort->short)
+   :uint16-le  (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :le)
+   :uint16-be  (primitive-codec .getShort .putShort 2 short->ushort short ushort->short :be)
 
-   :uint24 (primitive-codec (partial get-unsigned-medium native-byte-order)
-                            (partial put-medium native-byte-order) 3 identity int identity)
-   :uint24-le (primitive-codec (partial get-unsigned-medium :le)
-                               (partial put-medium :le) 3 identity int identity)
-   :uint24-be (primitive-codec (partial get-unsigned-medium :be)
-                               (partial put-medium :be) 3 identity int identity)
+   :uint24     (primitive-codec (partial get-unsigned-medium native-byte-order)
+                                (partial put-medium native-byte-order) 3 identity int identity)
+   :uint24-le  (primitive-codec (partial get-unsigned-medium :le)
+                                (partial put-medium :le) 3 identity int identity)
+   :uint24-be  (primitive-codec (partial get-unsigned-medium :be)
+                                (partial put-medium :be) 3 identity int identity)
 
-   :uint32 (primitive-codec .getInt .putInt 4 int->uint int uint->int)
-   :uint32-le (primitive-codec .getInt .putInt 4 int->uint int uint->int :le)
-   :uint32-be (primitive-codec .getInt .putInt 4 int->uint int uint->int :be)
+   :uint32     (primitive-codec .getInt .putInt 4 int->uint int uint->int)
+   :uint32-le  (primitive-codec .getInt .putInt 4 int->uint int uint->int :le)
+   :uint32-be  (primitive-codec .getInt .putInt 4 int->uint int uint->int :be)
 
-   :uint64 (primitive-codec .getLong .putLong 8 long->ulong long ulong->long)
-   :uint64-le (primitive-codec .getLong .putLong 8 long->ulong long ulong->long :le)
-   :uint64-be (primitive-codec .getLong .putLong 8 long->ulong long ulong->long :be)})
+   :uint64     (primitive-codec .getLong .putLong 8 long->ulong long ulong->long)
+   :uint64-le  (primitive-codec .getLong .putLong 8 long->ulong long ulong->long :le)
+   :uint64-be  (primitive-codec .getLong .putLong 8 long->ulong long ulong->long :be)})

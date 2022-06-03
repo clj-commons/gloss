@@ -61,7 +61,7 @@
         (encode-to-buffer codec buf vals)
         [(.rewind buf)])
       (apply concat
-        (map #(write-bytes codec nil %) vals)))))
+             (map #(write-bytes codec nil %) vals)))))
 
 (defn encode-to-stream
   "Encodes a sequence of values, and writes them to an OutputStream."
@@ -77,17 +77,17 @@
   "Turns bytes into a single frame value.  If there are too few or too many bytes
    for the frame, an exception is thrown."
   ([frame bytes]
-     (decode frame bytes true))
+   (decode frame bytes true))
   ([frame bytes no-remainder?]
-     (let [codec (compile-frame frame)]
-       (binding [complete? true]
-         (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
-               [success val remainder] (read-bytes codec buf-seq)]
-           (when-not success
-             (throw (Exception. "Insufficient bytes to decode frame.")))
-           (when (and no-remainder? (not (zero? (bytes/byte-count remainder))))
-             (throw (Exception. "Bytes left over after decoding frame.")))
-           val)))))
+   (let [codec (compile-frame frame)]
+     (binding [complete? true]
+       (let [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
+             [success val remainder] (read-bytes codec buf-seq)]
+         (when-not success
+           (throw (Exception. "Insufficient bytes to decode frame.")))
+         (when (and no-remainder? (not (zero? (bytes/byte-count remainder))))
+           (throw (Exception. "Bytes left over after decoding frame.")))
+         val)))))
 
 (defn- decoder [frame]
   (let [codec (compile-frame frame)]
@@ -105,7 +105,7 @@
   (let [decode-next (decoder frame)]
     (binding [complete? true]
       (loop [buf-seq (bytes/dup-bytes (to-buf-seq bytes))
-             vals    []]
+             vals []]
         (if-let [[val remainder] (decode-next buf-seq)]
           (recur remainder (conj vals val))
           vals)))))

@@ -23,7 +23,7 @@
   (concat
     (map #(.rewind ^CharBuffer %) (drop-last buf-seq))
     (let [last-buf ^CharBuffer (last buf-seq)
-	  last-pos (.position last-buf)]
+          last-pos (.position last-buf)]
       [(-> last-buf (.position 0) ^CharBuffer (.limit last-pos) .slice)])))
 
 (defn drop-chars
@@ -84,10 +84,10 @@
     (throw (IndexOutOfBoundsException. (str idx " is not a valid index.")))
     (loop [idx idx chars char-buf-seq]
       (let [buf ^CharBuffer (first chars)]
-	(cond
-	  (nil? buf) (throw (IndexOutOfBoundsException. (str idx "is greater than length of " length)))
-	  (> idx (.remaining buf)) (recur (- idx (.remaining buf)) (rest chars))
-	  :else (.get buf (int idx)))))))
+        (cond
+          (nil? buf) (throw (IndexOutOfBoundsException. (str idx "is greater than length of " length)))
+          (> idx (.remaining buf)) (recur (- idx (.remaining buf)) (rest chars))
+          :else (.get buf (int idx)))))))
 
 (defn sub-sequence [char-buf-seq length start end]
   (if (or (neg? start) (<= length end))
@@ -104,13 +104,13 @@
   (let [length (apply + (map #(.remaining ^CharBuffer %) char-buf-seq))]
     ^{:type ::char-sequence}
     (reify
-      
+
       CharSequence
       (charAt [this idx] (nth-char char-buf-seq length idx))
       (length [_] length)
       (subSequence [_ start end] (sub-sequence char-buf-seq length start end))
       (toString [_] (apply str char-buf-seq))
-      
+
       clojure.lang.Counted
       (count [_] length))))
 
