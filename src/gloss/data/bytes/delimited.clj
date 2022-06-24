@@ -9,6 +9,7 @@
 (ns ^{:skip-wiki true}
   gloss.data.bytes.delimited
   (:require
+    [clj-commons.byte-streams :as bs]
     [gloss.data.bytes.core :refer :all]
     [gloss.core.protocols :refer :all]
     [gloss.core.formats :refer :all]
@@ -78,15 +79,17 @@
             [false 0 0]
             (if (some
                   (fn [delimiter]
-                    (let [delimiter (byte-buffer->byte-seq delimiter)]
+                    (let [delimiter-array (bs/to-byte-array delimiter)]
                       (.position buf pos)
                       (and
                         (or (not (< 1 max-delimiter-length))
                             (<= pos (or final-position
-                                        (unchecked-subtract buf-length (count delimiter)))))
+                                        (unchecked-subtract buf-length (count delimiter-array)))))
                         (every?
-                          (fn [val] (== (int val) (int (.get buf))))
-                          delimiter))))
+                          (fn [v]
+                            (== (int v)
+                                (int (.get buf))))
+                          (seq delimiter-array)))))
                   delimiters)
               [true (if strip-delimiters? pos (.position buf)) (.position buf)]
               (recur (unchecked-inc pos)))))))))
