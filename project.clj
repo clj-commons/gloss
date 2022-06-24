@@ -1,6 +1,6 @@
 (defproject org.clj-commons/gloss (or (System/getenv "PROJECT_VERSION") "0.3.1")
   :description "Speaks in bytes, so that you don't have to"
-  
+
   :url "https://github.com/clj-commons/gloss"
   :scm {:name "git" :url "https://github.com/clj-commons/gloss"}
   :license {:name "Eclipse Public License - v 1.0"
@@ -10,13 +10,15 @@
   :deploy-repositories [["clojars" {:url "https://repo.clojars.org"
                                     :username :env/clojars_username
                                     :password :env/clojars_password
-                                    :sign-releases true}]]          
+                                    :sign-releases true}]]
 
   :dependencies [[manifold/manifold "0.2.4"]
                  [org.clj-commons/byte-streams "0.3.1"]
                  [potemkin/potemkin "0.4.5"]]
 
-  :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.1"]]}
+  :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.1"]
+                                  [org.clojure/test.check "1.1.1"]
+                                  [metosin/malli "0.8.9"]]}
              :ci {:javac-options ["-target" "1.8" "-source" "1.8"]
                   :dependencies [[org.clojure/clojure "1.11.1"]]}}
   :cljfmt {:indents {#".*" [[:inner 0]]}}
