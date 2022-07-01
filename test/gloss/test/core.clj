@@ -50,10 +50,11 @@
 (defn convert-result [x]
   (-> x convert-buf-seqs convert-char-sequences convert-string-sequence))
 
-(defn is= [a b]
-  (is
-    (= (convert-string-sequence a) (convert-result b))
-    (str (prn-str a) (prn-str b))))
+(defn is=
+  ([a b]
+   (is= a b (str (prn-str a) (prn-str b))))
+  ([a b mesg]
+   (is (= (convert-string-sequence a) (convert-result b)) mesg)))
 
 (defn partition-bytes [interval bytes]
   (let [buf-seq (to-buf-seq bytes)]
@@ -70,10 +71,10 @@
 (defn split-stream [split-fn frame val]
   (s/->source (split-fn (encode-all frame [val val]))))
 
-(defn test-stream-roundtrip [split-fn frame val]
+(defn test-stream-roundtrip [split-fn frame val mesg]
   (let [ch (decode-stream (split-stream split-fn frame val) frame)]
     (let [s (convert-result (s/stream->seq ch))]
-      (is= [val val] s)))
+      (is= [val val] s mesg)))
   #_(let [s (decode-stream-headers (split-stream split-fn frame val) frame)
           v1 @(s/take! s)
           v2 (s/stream->seq (decode-stream s frame))]
@@ -85,28 +86,28 @@
         val* (convert-char-sequences (decode f bytes))]
     (is (= val val*))))
 
-(defn test-roundtrip [f val]
-  (let [f (compile-frame f)
-        bytes (encode f val)
-        val* (convert-char-sequences (decode f bytes))
-        bytes (encode-all f [val val])
-        result (decode-all f bytes)
-        contiguous-result (decode-all f (contiguous bytes))
-        split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all f))
-        lazy-result (lazy-decode-all f bytes)
-        lazy-contiguous-result (lazy-decode-all f bytes)
-        lazy-split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (lazy-decode-all f))]
-    (is= val val*)
-    (test-stream-roundtrip #(partition-bytes 1 %) f val)
-    (is= [val val] result)
-    (is= [val val] split-result)
-    (is= [val val] contiguous-result)
-    (is= [val val] lazy-result)
-    (is= [val val] lazy-split-result)
-    (is= [val val] lazy-contiguous-result)
+(defn test-roundtrip [fr val]
+  (let [codec (compile-frame fr)
+        bytes (encode codec val)
+        val* (convert-char-sequences (decode codec bytes))
+        bytes (encode-all codec [val val])
+        result (decode-all codec bytes)
+        contiguous-result (decode-all codec (contiguous bytes))
+        split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (decode-all codec))
+        lazy-result (lazy-decode-all codec bytes)
+        lazy-contiguous-result (lazy-decode-all codec bytes)
+        lazy-split-result (->> bytes to-buf-seq dup-bytes (partition-bytes 1) (lazy-decode-all codec))]
+    (is= val val* "char seq conversion failed")
+    (test-stream-roundtrip #(partition-bytes 1 %) codec val "roundtrip partition-bytes 1 failure")
+    (is= [val val] result "basic codec failed")
+    (is= [val val] contiguous-result "contiguous failed")
+    (is= [val val] split-result "split failed")
+    (is= [val val] lazy-result "lazy failed")
+    (is= [val val] lazy-split-result "lazy split failed")
+    (is= [val val] lazy-contiguous-result "lazy contiguous failed")
     (doseq [i (range 1 (byte-count bytes))]
-      (is= [val val] (decode-all f (apply concat (split-bytes i bytes))))
-      (test-stream-roundtrip #(split-bytes i %) f val))))
+      (is= [val val] (decode-all codec (apply concat (split-bytes i bytes))))
+      (test-stream-roundtrip #(split-bytes i %) codec val (str "roundtrip split " i " failure")))))
 
 (defn test-full-roundtrip [f buf val]
   (is= val (decode f (-> buf to-buf-seq dup-bytes)))
