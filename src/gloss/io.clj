@@ -8,6 +8,7 @@
 
 (ns gloss.io
   (:require
+    [clj-commons.byte-streams :as bs]
     [gloss.core.codecs :refer :all]
     [gloss.core.protocols :refer :all]
     [gloss.core.structure :refer :all]
@@ -122,7 +123,7 @@
              (cons val (decode-rest remainder))))))
      (bytes/dup-bytes (to-buf-seq bytes)))))
 
-(defn- decode-byte-sequence [codecs buf-seq]
+(defn decode-byte-sequence [codecs buf-seq]
   (if (empty? buf-seq)
     (let [[success x remainder] (read-bytes (first codecs) buf-seq)]
       (if success
@@ -146,8 +147,6 @@
         dst (s/stream)
         state-ref (atom {:codecs (repeat frame) :bytes nil})
         f (fn [bytes]
-            #_(when (empty? bytes)
-                (println "bytes param empty"))
             (let [state @state-ref]
               (binding [complete? (s/drained? src)]
                 (let [all-bytes (bytes/concat-bytes
@@ -157,49 +156,51 @@
                                              (:codecs state)
                                              all-bytes)]
                   (reset! state-ref {:codecs codecs :bytes (to-buf-seq remainder)})
+
+                  #_(println "s:" (pr-str s))
                   #_(when (= (first s) "")
-                      (sc.api/spyqt {:sc/dynamic-vars [complete?]
-                                     #_#_:sc/called-from :on-drained}))
+                    (s/put! dst (ex-info "invalid output" {:bytes     bytes
+                                                           :all-bytes all-bytes
+                                                           :complete? complete?
+                                                           :s s
+                                                           :codecs (prn codecs)
+                                                           :remainder remainder})))
                   (s/put-all! dst s)))))
+        connect-d (s/connect-via src f dst {:downstream? false})
+        #_#_ dst-close-fn (fn [_]
+                       (s/close! dst))]
 
-        connect-d (s/connect-via src f dst {:downstream? true})]
-    (s/on-drained src (fn decode-stream-closed []
-                        #_(log/info "decode stream src drained")
-
-
+    #_ (d/on-realized connect-d dst-close-fn dst-close-fn)
+    (s/on-drained src (fn src-decode-stream-drained []
+                        ;; Flush/decode any remaining output held
+                        ;; this is the source of the ""'s
                         (let [state @state-ref]
-                          (when (seq (:bytes state))
-                            (log/info "Trying to parse remaining bytes")
-                            @(f []))
-                          #_(s/close! dst))
+                          (binding [complete? true]
+                            (#_#_ if-some [bs (:bytes state)]
+                             let [bs (:bytes state)]
+                              (let [[s codecs remainder] (decode-byte-sequence
+                                                           (:codecs state)
+                                                           bs)
+                                    final-put-d (s/put-all! dst s)]
 
-                        #_
-                        (let [state @state-ref]
-                          (when (seq (:bytes state))
-                            (log/info "Trying to parse remaining bytes")
-                            @(f [])))
 
-                        #_(let [before-state @state-ref]
+                                #_(bs/print-bytes bs)
+                                #_(bs/print-bytes (byte-array 5 (byte 69)))
+                                #_(when (= (first s) "")
+                                  (log/info (pr-str {:bytes     (when (some? bs)
+                                                                  (bs/to-byte-array bs))
+                                                     :s         s
+                                                     :codecs    (if (seq codecs)
+                                                                  (-> codecs first pr-str)
+                                                                  (pr-str codecs))
+                                                     :remainder remainder})))
 
-                            #_(sc.api/spyqt)
-                            #_(let [after-state @state-ref]
-                                #_(prn after-state)
-                                (when (and (:bytes after-state)
-                                           (seq (:bytes after-state)))
-                                  (println "state before")
-                                  (prn before-state)
-                                  (println "state after")
-                                  (prn after-state))))
 
-                        #_#_(deref connect-d 100 ::timeout)
-                                (s/close! dst)
+                                #_(s/put-all! dst s)
+                                #_(d/finally final-put-d (fn [_] (s/close! dst))))
+                             #_ (s/close! dst))))
 
-                        (let [close-fn (fn [_]
-                                         #_(log/info "closing dst...")
-                                         (s/close! dst))]
-                          (d/on-realized connect-d close-fn close-fn))))
-    #_#_ (s/on-closed src #(log/info "decode stream src closed"))
-    (s/on-closed dst #(log/info "decode stream dst closed"))
+                        #_(s/close! dst)))
 
     dst))
 
