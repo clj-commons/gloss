@@ -16,13 +16,15 @@
                  [org.clj-commons/byte-streams "0.3.1"]
                  [potemkin/potemkin "0.4.5"]]
 
-  :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.1"]]}
+  :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.1"]
+                                  [com.taoensso/timbre "5.2.1"]
+                                  [lambdaisland/kaocha "1.68.1059"]]}
              :ci {:javac-options ["-target" "1.8" "-source" "1.8"]
                   :dependencies [[org.clojure/clojure "1.11.1"]]}}
   :cljfmt {:indents {#".*" [[:inner 0]]}}
 
   :plugins [[jonase/eastwood "1.2.3"]]
   :eastwood {:exclude-linters [:non-dynamic-earmuffs :unlimited-use :unused-meta-on-macro]}
-
+  :aliases {"kaocha" ["run" "-m" "kaocha.runner"]}
   :global-vars {*warn-on-reflection* true}
   :javac-options ["-target" "1.8" "-source" "1.8"])
