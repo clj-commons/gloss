@@ -358,3 +358,24 @@
 
     (is-encoded [0 0 -128] [:int24-le] [-8388608])
     (is-encoded [-128 0 0] [:int24-be] [-8388608])))
+
+(require '[taoensso.timbre :as log])
+
+(deftest test-decode-stream
+  (testing "closing the decoded stream doesn't lose data"
+    (let [num-nums 10]
+      (dotimes [test-count 100]
+        #_(log/info "test #" test-count)
+        (let [str-frame (string "utf-8")
+              in (s/stream 0 (map #(encode str-frame %)))
+              out (decode-stream in str-frame)
+              test-future (future
+                            (dotimes [n num-nums]
+                              (is (= @(s/put! in (str n)) true) "failed to put!"))
+                            (s/close! in))]
+          (is (= (map str (range num-nums))
+                 (repeatedly num-nums #(deref (s/take! out ::default)))))
+          #_(Thread/sleep 10)
+          #_(log/info "out closed?" (s/closed? out))
+          @test-future
+          (is (s/closed? out)))))))

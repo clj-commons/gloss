@@ -136,25 +136,70 @@
             (recur remainder (conj vals x) (rest codecs))
             [vals (cons x (rest codecs)) remainder]))))))
 
+(require '[taoensso.timbre :as log])
+
 (defn decode-stream
-  "Given a stream that emits bytes, returns a channel that emits decoded frames whenever
+  "Given a stream that emits bytes, returns a stream that emits decoded frames whenever
    there are sufficient bytes."
   [src frame]
   (let [src (s/->source src)
         dst (s/stream)
         state-ref (atom {:codecs (repeat frame) :bytes nil})
         f (fn [bytes]
+            #_(when (empty? bytes)
+                (println "bytes param empty"))
             (let [state @state-ref]
               (binding [complete? (s/drained? src)]
-                (let [bytes (-> bytes to-buf-seq bytes/dup-bytes)
+                (let [all-bytes (bytes/concat-bytes
+                                  (:bytes state)
+                                  (-> bytes to-buf-seq bytes/dup-bytes))
                       [s codecs remainder] (decode-byte-sequence
                                              (:codecs state)
-                                             (bytes/concat-bytes (:bytes state) bytes))]
+                                             all-bytes)]
                   (reset! state-ref {:codecs codecs :bytes (to-buf-seq remainder)})
-                  (s/put-all! dst s)))))]
+                  #_(when (= (first s) "")
+                      (sc.api/spyqt {:sc/dynamic-vars [complete?]
+                                     #_#_:sc/called-from :on-drained}))
+                  (s/put-all! dst s)))))
 
-    (s/connect-via src f dst {:downstream? false})
-    (s/on-drained src #(do (f []) (s/close! dst)))
+        connect-d (s/connect-via src f dst {:downstream? true})]
+    (s/on-drained src (fn decode-stream-closed []
+                        #_(log/info "decode stream src drained")
+
+
+                        (let [state @state-ref]
+                          (when (seq (:bytes state))
+                            (log/info "Trying to parse remaining bytes")
+                            @(f []))
+                          #_(s/close! dst))
+
+                        #_
+                        (let [state @state-ref]
+                          (when (seq (:bytes state))
+                            (log/info "Trying to parse remaining bytes")
+                            @(f [])))
+
+                        #_(let [before-state @state-ref]
+
+                            #_(sc.api/spyqt)
+                            #_(let [after-state @state-ref]
+                                #_(prn after-state)
+                                (when (and (:bytes after-state)
+                                           (seq (:bytes after-state)))
+                                  (println "state before")
+                                  (prn before-state)
+                                  (println "state after")
+                                  (prn after-state))))
+
+                        #_#_(deref connect-d 100 ::timeout)
+                                (s/close! dst)
+
+                        (let [close-fn (fn [_]
+                                         #_(log/info "closing dst...")
+                                         (s/close! dst))]
+                          (d/on-realized connect-d close-fn close-fn))))
+    #_#_ (s/on-closed src #(log/info "decode stream src closed"))
+    (s/on-closed dst #(log/info "decode stream dst closed"))
 
     dst))
 
