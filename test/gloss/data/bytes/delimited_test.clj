@@ -98,7 +98,26 @@
       (is (= [false 0 0]
              (m4 d1 true)))
       (is (= [false 0 0]
-             (m4 d1 false))))))
+             (m4 d1 false)))))
+  (testing "parallel"
+    (let [d1 (ByteBuffer/allocate 1000)
+          ml (delimited/match-loop
+               [d1]
+               false)
+          errors (atom [])
+          futures (for [t (range 4)]
+                    (let [d2 (ByteBuffer/allocate 1000)]
+                      (.put d2 (int 500) (byte 1))
+                      (future
+                        (dotimes [n 8]
+                          (try
+                            (ml d2 false)
+                            (ml d2 true)
+                            (catch Exception e
+                              (swap! errors conj [t n e])))))))]
+     (mapv deref futures)
+     (is (= []
+            @errors)))))
 
 
 (defn check-match-loop
