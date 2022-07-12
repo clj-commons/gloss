@@ -66,12 +66,10 @@
   (testing "no match"
     (let [d1 (ByteBuffer/allocate 4)
           m1 (delimited/match-loop
-               [
-                (ByteBuffer/allocate 1)]
+               [(ByteBuffer/allocate 1)]
                false)
           m2 (delimited/match-loop
-               [
-                (ByteBuffer/allocate 1)]
+               [(ByteBuffer/allocate 1)]
                true)
           m3 (delimited/match-loop
                [(ByteBuffer/allocate 0)]
@@ -115,40 +113,30 @@
                             (ml d2 true)
                             (catch Exception e
                               (swap! errors conj [t n e])))))))]
-     (mapv deref futures)
-     (is (= []
-            @errors)))))
+     (run! deref futures)
+     (is (empty? @errors)))))
 
+
+(defn- into-bytebuffer [integers]
+  (let [bb (ByteBuffer/allocate (count integers))]
+    (doall
+      (map-indexed
+        (fn [i v]
+          (.put bb (int i) (byte v)))
+        integers))
+    bb))
 
 (defn check-match-loop
   [{:keys [delimiters
            buffer
            strip-delimiters?
            last-and-complete?]}]
-  (let [delimiters (mapv
-                     (fn [delimiter]
-                       (let [bb (ByteBuffer/allocate (count delimiter))]
-                         (doall
-                           (map-indexed
-                             (fn [i v]
-                               (.put bb (int i) (byte v)))
-                             delimiter))
-                         bb))
-                     delimiters)
+  (let [delimiters (mapv into-bytebuffer delimiters)
         ml (delimited/match-loop
              delimiters
              strip-delimiters?)
-        buf (ByteBuffer/allocate (count buffer))]
-    (doall
-      (map-indexed
-        (fn [i v]
-          (.put buf (int i) (byte v)))
-        buffer))
-    (try
-      (ml buf last-and-complete?)
-      (catch Throwable t
-        (println "error" t)
-        t))))
+        buf (into-bytebuffer buffer)]
+    (ml buf last-and-complete?)))
 
 
 (def byte-int
