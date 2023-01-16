@@ -1,3 +1,13 @@
+=== 0.3.2
+
+* Fix buffer underflow error
+
+Contributions by skynet
+
+=== 0.3.1
+
+Never deployed
+
 === 0.3.0
 
 * Fix private metadata for `defcodec`
