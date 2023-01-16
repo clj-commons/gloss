@@ -12,9 +12,9 @@
                                     :password :env/clojars_password
                                     :sign-releases true}]]
 
-  :dependencies [[manifold/manifold "0.2.4"]
-                 [org.clj-commons/byte-streams "0.3.1"]
-                 [potemkin/potemkin "0.4.5"]]
+  :dependencies [[manifold/manifold "0.3.0"]
+                 [org.clj-commons/byte-streams "0.3.2"]
+                 [potemkin/potemkin "0.4.6"]]
 
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.11.1"]
                                   [org.clojure/test.check "1.1.1"]
