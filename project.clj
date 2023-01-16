@@ -20,7 +20,8 @@
                                   [org.clojure/test.check "1.1.1"]
                                   [metosin/malli "0.8.9"]]}
              :ci {:javac-options ["-target" "1.8" "-source" "1.8"]
-                  :dependencies [[org.clojure/clojure "1.11.1"]]}}
+                  :dependencies [[org.clojure/clojure "1.11.1"]
+                                 [metosin/malli "0.8.9"]]}}
   :cljfmt {:indents {#".*" [[:inner 0]]}}
 
   :plugins [[jonase/eastwood "1.2.3"]]
