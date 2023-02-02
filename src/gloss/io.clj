@@ -136,11 +136,19 @@
             (recur remainder (conj vals x) (rest codecs))
             [vals (cons x (rest codecs)) remainder]))))))
 
+(defn- append-empty-vec
+  "Create a stream that is src with an empty vec appended
+   this is used in the decode-stream functions to decode
+   any bytes left in remainder after src is drained"
+  [src]
+  (s/concat [(s/->source src)
+             (s/->source [[]])]))
+
 (defn decode-stream
   "Given a stream that emits bytes, returns a channel that emits decoded frames whenever
    there are sufficient bytes."
   [src frame]
-  (let [src (s/->source src)
+  (let [src (append-empty-vec src)
         dst (s/stream)
         state-ref (atom {:codecs (repeat frame) :bytes nil})
         f (fn [bytes]
@@ -153,8 +161,7 @@
                   (reset! state-ref {:codecs codecs :bytes (to-buf-seq remainder)})
                   (s/put-all! dst s)))))]
 
-    (s/connect-via src f dst {:downstream? false})
-    (s/on-drained src #(do (f []) (s/close! dst)))
+    (s/connect-via src f dst)
 
     dst))
 
@@ -165,7 +172,7 @@
    each frame passed into the function.  After those frames have been decoded, the channel will
    simply emit any bytes that are passed into the source channel."
   [src & frames]
-  (let [src (s/->source src)
+  (let [src (append-empty-vec src)
         dst (s/stream)
         state-ref (atom {:codecs (map compile-frame frames) :bytes nil})
         f (fn [bytes]
@@ -183,8 +190,7 @@
                         (s/put-all! dst remainder)
                         res)))))))]
 
-    (s/connect-via src f dst {:downstream? false})
-    (s/on-drained src #(do (f []) (s/close! dst)))
+    (s/connect-via src f dst)
 
     dst))
 
