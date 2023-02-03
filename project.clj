@@ -1,4 +1,4 @@
-(defproject org.clj-commons/gloss (or (System/getenv "PROJECT_VERSION") "0.3.2")
+(defproject org.clj-commons/gloss (or (System/getenv "PROJECT_VERSION") "0.3.4")
   :description "Speaks in bytes, so that you don't have to"
 
   :url "https://github.com/clj-commons/gloss"
