@@ -148,8 +148,7 @@
   "Given a stream that emits bytes, returns a channel that emits decoded frames whenever
    there are sufficient bytes."
   [src frame]
-  (let [src (append-empty-vec src)
-        dst (s/stream)
+  (let [dst (s/stream)
         state-ref (atom {:codecs (repeat frame) :bytes nil})
         f (fn [bytes]
             (let [state @state-ref]
@@ -161,7 +160,7 @@
                   (reset! state-ref {:codecs codecs :bytes (to-buf-seq remainder)})
                   (s/put-all! dst s)))))]
 
-    (s/connect-via src f dst)
+    (s/connect-via (append-empty-vec src) f dst)
 
     dst))
 
@@ -172,8 +171,7 @@
    each frame passed into the function.  After those frames have been decoded, the channel will
    simply emit any bytes that are passed into the source channel."
   [src & frames]
-  (let [src (append-empty-vec src)
-        dst (s/stream)
+  (let [dst (s/stream)
         state-ref (atom {:codecs (map compile-frame frames) :bytes nil})
         f (fn [bytes]
             (let [{:keys [codecs] :as state} @state-ref]
@@ -190,7 +188,7 @@
                         (s/put-all! dst remainder)
                         res)))))))]
 
-    (s/connect-via src f dst)
+    (s/connect-via (append-empty-vec src) f dst)
 
     dst))
 
