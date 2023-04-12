@@ -131,7 +131,7 @@
        (read-bytes [this# b#]
          (if (< (byte-count b#) ~size)
            [false this# b#]
-           (let [first-buf# (first b#)
+           (let [^ByteBuffer first-buf# (first b#)
                  remaining# (.remaining ^Buffer first-buf#)]
              (cond
                (= ~size remaining#)
@@ -141,7 +141,26 @@
                 (rest b#)]
 
                (< ~size remaining#)
-               [true
+               ;; #1
+               (let [mark# (.mark first-buf#)]
+                 [true
+                  (with-byte-order [first-buf# ~bo]
+                                   (~get-transform (~accessor ^ByteBuffer first-buf#)))
+                  (do
+                      (.reset first-buf#)
+                      (-> b# (drop-bytes ~size)))])
+
+               ;; #2
+               #_[true
+                (with-byte-order [first-buf# ~bo]
+                                 (~get-transform (~accessor
+                                                   (.slice ^ByteBuffer first-buf#))))
+                (let [result# (-> b# (drop-bytes ~size))]
+                    (println "primitive-codec remainder:" result#)
+                    result#)]
+
+               ;; #3 orig
+               #_[true
                 (with-byte-order [first-buf# ~bo]
                                  (~get-transform (~accessor ^ByteBuffer first-buf#)))
                 (-> b# rewind-bytes (drop-bytes ~size))]
