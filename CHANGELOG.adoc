@@ -1,8 +1,14 @@
-=== 0.3.4
+=== 0.3.5
 
-* Fix for tricky race condition bug when closing decode-streams
+* Fix for ignoring non-zero ByteBuffer position at start of stream
 
-Contribution by bo-tato and ryuuseijin
+Contributions by Matthew Davidson and Oskar Kvist
+
+=== 0.3.4 (reverted before release)
+
+* [.line-through]#Fix for tricky race condition bug when closing decode-streams# - needs more work
+
+Contributions by bo-tato and ryuuseijin
 
 === 0.3.3
 
