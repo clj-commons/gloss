@@ -213,7 +213,9 @@
       this
 
       (< n byte-count)
-      (SingleBufferSequence. (-> buffer duplicate (position n) slice) (- byte-count n))
+      (let [new-position (+ n (position buffer))]
+        (SingleBufferSequence. (-> buffer duplicate (position new-position) slice)
+                               (- byte-count n)))
 
       :else
       nil))
