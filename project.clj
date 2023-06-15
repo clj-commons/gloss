@@ -1,4 +1,4 @@
-(defproject org.clj-commons/gloss (or (System/getenv "PROJECT_VERSION") "0.3.5")
+(defproject org.clj-commons/gloss (or (System/getenv "PROJECT_VERSION") "0.3.6")
   :description "Speaks in bytes, so that you don't have to"
 
   :url "https://github.com/clj-commons/gloss"
@@ -12,7 +12,7 @@
                                     :password :env/clojars_org_clj_commons_password
                                     :sign-releases true}]]
 
-  :dependencies [[manifold/manifold "0.4.0"]
+  :dependencies [[manifold/manifold "0.4.1"]
                  [org.clj-commons/byte-streams "0.3.2"]
                  [potemkin/potemkin "0.4.6"]]
 
