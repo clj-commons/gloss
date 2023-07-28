@@ -10,3 +10,5 @@ target
 .cpcache/
 **/.clj-kondo/.cache
 .eastwood
+.lsp/.cache
+.portal/vs-code.edn
